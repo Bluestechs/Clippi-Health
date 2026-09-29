@@ -34,13 +34,13 @@
     "@electron-forge/maker-zip": "^7.11.2",
     "@electron-forge/plugin-fuses": "^7.11.2",
     "@electron/fuses": "^1.8.0",
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.6.3",
     "electron": "^44.4.5",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.2",
     "plist": "^3.1.0",
     "png2icons": "^2.0.1",
-    "typescript": "^5.7.3",
-    "vitest": "^4.1.11"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
   },
   "allowScripts": {
     "electron@44.4.5": true,
