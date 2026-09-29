@@ -1,5 +1,6 @@
 // The app shell. No data handling here: every disk, portal and subprocess operation is an IPC call.
 type AppState = {
+  demo: boolean;
   root: string;
   defaultRoot: string;
   valid: boolean;
@@ -45,6 +46,7 @@ type Summary = {
 };
 
 type Bridge = {
+  setDemo(enabled: boolean): Promise<{ code: number; error?: string }>;
   state(): Promise<AppState>;
   summary(): Promise<Summary | null>;
   chooseRoot(): Promise<AppState>;
@@ -153,6 +155,13 @@ function showTab(name: string): void {
 
 async function refreshState(): Promise<void> {
   state = await window.hp.state();
+  document.body.classList.toggle("demo-mode", state.demo);
+  el("demo-banner").hidden = !state.demo;
+  el("demo-toggle").textContent = state.demo ? "Exit demo" : "Try demo";
+  el("demo-toggle").title = state.demo ? "Return to your own records" : "Open Sally Seastar’s fictional record";
+  for (const id of ["root-choose", "open-external", "import-choose", "archive-import-choose"]) {
+    el<HTMLButtonElement>(id).disabled = state.demo;
+  }
   el("root-path").textContent = state.root;
   el("dashboard-note").textContent = state.dashboard
     ? ""
@@ -403,6 +412,12 @@ async function renderConnectors(): Promise<void> {
     if (registrationSteps.childElementCount) setup.append(registrationSteps);
     if (setupActions.childElementCount) setup.append(setupActions);
     card.append(setup);
+    if (state?.demo) {
+      for (const control of card.querySelectorAll<HTMLButtonElement | HTMLInputElement>("button, input")) {
+        control.disabled = true;
+        control.title = "Exit demo to connect or import personal records";
+      }
+    }
     return card;
   }));
 }
@@ -555,6 +570,35 @@ async function renderDoctor(): Promise<void> {
 }
 
 // --- wiring -----------------------------------------------------------------
+
+let requestedDemo = false;
+async function switchDemo(enabled: boolean): Promise<void> {
+  requestedDemo = enabled;
+  document.body.classList.add("mode-switching");
+  el("mode-cover").hidden = false;
+  el("mode-retry").hidden = true;
+  el("mode-back").hidden = true;
+  el("mode-message").textContent = enabled ? "Preparing Sally Seastar’s demo…" : "Returning to your records…";
+  // Blank the embedded page now. A full reload drops cached notes, logs, sources and pending UI work.
+  el<HTMLIFrameElement>("dashboard").src = "about:blank";
+  try {
+    const result = await window.hp.setDemo(enabled);
+    if (result.code === 0) { window.location.reload(); return; }
+    el("mode-message").textContent = result.error ?? "Could not switch records.";
+  } catch {
+    el("mode-message").textContent = "Could not switch records. Try again when the current operation finishes.";
+  }
+  // Keep the privacy cover up on errors; returning to the previous records is explicit.
+  el("mode-retry").hidden = false;
+  el("mode-back").hidden = false;
+}
+
+el("demo-toggle").onclick = () => {
+  if (state?.demo && !window.confirm("Exit demo and show your personal records? Stop recording before continuing.")) return;
+  void switchDemo(!state?.demo);
+};
+el("mode-retry").onclick = () => void switchDemo(requestedDemo);
+el("mode-back").onclick = () => window.location.reload();
 
 window.hp.onLog(appendLog);
 window.hp.onTab(showTab);

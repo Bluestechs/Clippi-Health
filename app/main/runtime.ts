@@ -1,9 +1,10 @@
 import { app } from "electron";
 import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 import type { Paths } from "./roots";
 import { findTool } from "./proc";
 
-export type RuntimeArea = "build" | "query" | "smart";
+export type RuntimeArea = "build" | "query" | "smart" | "demo";
 
 export type Invocation = {
   cmd: string;
@@ -19,6 +20,7 @@ export function invocation(paths: Paths, area: RuntimeArea, args: string[] = [])
   }
   const python = findTool("python3") ?? findTool("python");
   if (!python) return null;
-  const script = area === "build" ? paths.builder : area === "query" ? paths.cli : paths.smartConnector;
+  const script = area === "demo" ? join(dirname(paths.builder), "demo_data.py")
+    : area === "build" ? paths.builder : area === "query" ? paths.cli : paths.smartConnector;
   return existsSync(script) ? { cmd: python, args: [script, ...args], env } : null;
 }

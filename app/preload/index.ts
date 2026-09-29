@@ -6,6 +6,7 @@ const invoke = (channel: string, ...args: unknown[]) => ipcRenderer.invoke(chann
 
 contextBridge.exposeInMainWorld("hp", {
   state: () => invoke("state:get"),
+  setDemo: (enabled: boolean) => invoke("demo:set", enabled),
   summary: () => invoke("summary:get"),
   chooseRoot: () => invoke("root:choose"),
 

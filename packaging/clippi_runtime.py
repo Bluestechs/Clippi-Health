@@ -23,11 +23,14 @@ def initialize_data_root():
 
 
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] not in {"build", "query", "smart"}:
-        raise SystemExit("usage: clippi-runtime {build|query|smart} [arguments ...]")
+    if len(sys.argv) < 2 or sys.argv[1] not in {"build", "query", "smart", "demo"}:
+        raise SystemExit("usage: clippi-runtime {build|query|smart|demo} [arguments ...]")
     command = sys.argv.pop(1)
     resources = resource_root()
     os.environ.setdefault("CLIPPI_HEALTH_RESOURCES", str(resources))
+    if command == "demo":
+        import demo_data
+        return demo_data.main()
     initialize_data_root()
 
     if command == "build":

@@ -360,7 +360,7 @@ const srcPill = o => h("span", { class: "pill src", style: `--sc: var(--c-${srcC
 // ---------- header, tabs ----------
 (function header() {
   const p = DATA.patient || {};
-  const name = p.firstName ? p.firstName : "";
+  const name = DATA.demo ? `${p.firstName || ""} ${p.lastName || ""} · Fictional demo` : p.firstName || "";
   const dob = p.dateOfBirth || p.birthDate;
   $("#who").textContent = [name, dob ? "DOB " + dob : ""].filter(Boolean).join(" · ");
   const srcs = DATA.sources.map(s => s.short).join(" · ");

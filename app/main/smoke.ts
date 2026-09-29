@@ -21,6 +21,18 @@ export async function runSmoke(window: BrowserWindow): Promise<void> {
     window.webContents.once("did-finish-load", () => resolve());
     await promise;
   }
+  await delay(1200);
+  await window.webContents.executeJavaScript('document.getElementById("demo-toggle").click()');
+  let ready = false;
+  for (let attempt = 0; attempt < 60; attempt++) {
+    await delay(500);
+    ready = await window.webContents.executeJavaScript(`
+      document.body.classList.contains("demo-mode") && document.getElementById("who").textContent === "Sally"
+    `).catch(() => false);
+    if (ready) break;
+  }
+  if (!ready) throw new Error("The Demo button did not load Sally Seastar");
+  process.stdout.write("Demo button loaded Sally Seastar in an isolated store.\n");
   for (const tab of TABS) {
     window.webContents.send("tab", tab);
     await delay(1500); // the dashboard iframe inlines Plotly, so give it a paint
@@ -77,4 +89,34 @@ export async function runSmoke(window: BrowserWindow): Promise<void> {
   await window.webContents.executeJavaScript(`(() => {
     document.querySelector('[data-theme-value="system"]').click();
   })()`);
+  window.webContents.send("tab", "dashboard");
+  await delay(500);
+  const dashboard = window.webContents.mainFrame.frames.find(frame => frame.url.startsWith("hp://root/"));
+  if (!dashboard) throw new Error("Demo dashboard frame is missing");
+  const sample = await dashboard.executeJavaScript(`(() => {
+    showTab("vitals");
+    return { name: DATA.patient.firstName, days: DATA.vitals.filter(r => r.metric === "CGM / meter glucose").length, labs: DATA.labs.length };
+  })()`) as { name: string; days: number; labs: number };
+  if (sample.name !== "Sally" || sample.days !== 365 || sample.labs !== 108) throw new Error("Demo charts lack expected data");
+  await delay(700);
+  writePrivateScreenshot(join(outDir, "demo-vitals.png"), (await window.webContents.capturePage()).toPNG());
+  const zoom = await dashboard.executeJavaScript(`(async () => {
+    const chart = document.querySelector("#vitals .js-plotly-plot");
+    const dates = DATA.vitals.filter(r => r.metric === "CGM / meter glucose").map(r => r.date);
+    const range = dates.slice(-14);
+    await Plotly.relayout(chart, { "xaxis.range": [range[0], range.at(-1)] });
+    return chart.layout.xaxis.range;
+  })()`) as string[];
+  if (zoom.length !== 2 || zoom[0] === zoom[1]) throw new Error("Demo CGM chart did not zoom");
+  writePrivateScreenshot(join(outDir, "demo-vitals-zoom.png"), (await window.webContents.capturePage()).toPNG());
+  await dashboard.executeJavaScript('showTab("labs")');
+  await delay(500);
+  writePrivateScreenshot(join(outDir, "demo-labs.png"), (await window.webContents.capturePage()).toPNG());
+  process.stdout.write(`Demo chart data and zoom passed: ${JSON.stringify(sample)}\n`);
+  const returned = await window.webContents.executeJavaScript(`(async () => {
+    const result = await window.hp.setDemo(false);
+    const state = await window.hp.state();
+    return result.code === 0 && !state.demo;
+  })()`);
+  if (!returned) throw new Error("Could not exit demo mode");
 }

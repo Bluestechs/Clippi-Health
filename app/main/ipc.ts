@@ -1,16 +1,18 @@
 // Every renderer request, in one place. Handlers return plain data; long-running work streams lines
 // to the window on the "log" channel.
 import { BrowserWindow, dialog, ipcMain, shell } from "electron";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { doctor } from "./doctor";
 import { applyImport, planImport, type ImportPlan } from "./importer";
 import { readEvents, readNotes, writeEvents, writeNotes, type EventRow } from "./inputs";
 import { run } from "./proc";
-import { defaultRoot, getRoot, isRoot, paths, setRoot } from "./roots";
+import { defaultRoot, demoRoot, getRoot, isDemo, isRoot, paths, setDemoMode, setRoot } from "./roots";
 import { invocation } from "./runtime";
 
 export type AppState = {
   root: string;
+  demo: boolean;
   defaultRoot: string;
   valid: boolean;
   dashboard: boolean;
@@ -43,8 +45,9 @@ type Connector = {
 async function appState(): Promise<AppState> {
   const p = paths();
   return {
-    root: p.root,
-    defaultRoot: defaultRoot(),
+    root: isDemo() ? "Sally Seastar · isolated demo folder" : p.root,
+    demo: isDemo(),
+    defaultRoot: isDemo() ? "Demo folder" : defaultRoot(),
     valid: isRoot(p.root),
     dashboard: existsSync(p.dashboard),
     database: existsSync(p.db),
@@ -52,7 +55,46 @@ async function appState(): Promise<AppState> {
 }
 
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
-  const log = (line: string) => getWindow()?.webContents.send("log", line);
+  let active = 0;
+  let switching = false;
+  const log = (line: string) => {
+    if (!switching) getWindow()?.webContents.send("log", line);
+  };
+  const personalOnly = new Set([
+    "root:choose", "import:choose", "archive:choose", "portal:choose", "import:apply",
+    "connectors:configure", "connectors:clear", "connectors:connect", "connectors:open-link",
+    "connectors:open-guide", "dashboard:open",
+  ]);
+  const handle = (channel: string, listener: Parameters<typeof ipcMain.handle>[1]) => {
+    ipcMain.handle(channel, async (event, ...args) => {
+      if (switching) throw new Error("Record mode is changing. Please wait.");
+      if (isDemo() && personalOnly.has(channel)) throw new Error("Exit demo mode to use personal data sources or external windows.");
+      active++;
+      try { return await listener(event, ...args); }
+      finally { active--; }
+    });
+  };
+
+  ipcMain.handle("demo:set", async (_event, enabled: unknown) => {
+    if (typeof enabled !== "boolean") return { code: -1, error: "Invalid demo selection." };
+    if (switching || active) return { code: -1, error: "Wait until the current operation finishes, then try again." };
+    switching = true;
+    try {
+      if (enabled) {
+        const p = paths(demoRoot());
+        const command = invocation(p, "demo");
+        if (!command) return { code: -1, error: "The bundled demo engine was not found. Reinstall Clippi-Health." };
+        // No child output reaches the renderer: even a traceback can contain an OS username.
+        mkdirSync(dirname(p.root), { recursive: true, mode: 0o700 });
+        const result = await run(command.cmd, command.args, { cwd: dirname(p.root), env: command.env });
+        if (result.code !== 0) return { code: -1, error: "Could not prepare the demo folder. Your current record was not changed." };
+      }
+      setDemoMode(enabled);
+      return { code: 0 };
+    } catch {
+      return { code: -1, error: "Could not switch records. Your current record was not changed." };
+    } finally { switching = false; }
+  });
 
   const listConnectors = async (): Promise<Connector[]> => {
     const p = paths();
@@ -60,7 +102,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     if (!command) return [];
     const { code, stdout, stderr } = await run(command.cmd, command.args, { cwd: p.root, env: command.env });
     if (code !== 0) {
-      log(`connector list failed (${code}): ${stderr.trimEnd().split("\n").at(-1)?.trim() || "no error output"}`);
+      log(isDemo() ? "Demo provider catalog could not load." : `connector list failed (${code}): ${stderr.trimEnd().split("\n").at(-1)?.trim() || "no error output"}`);
       return [];
     }
     try {
@@ -71,9 +113,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     }
   };
 
-  ipcMain.handle("state:get", appState);
+  handle("state:get", appState);
 
-  ipcMain.handle("summary:get", async () => {
+  handle("summary:get", async () => {
     const p = paths();
     const command = invocation(p, "query", ["--json", "summary"]);
     if (!command || !existsSync(p.db)) return null;
@@ -82,7 +124,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     const { code, stdout, stderr } = await run(command.cmd, command.args, { cwd: p.root, env: command.env });
     if (code !== 0) {
       // Never log stdout here: on any failure path it may still hold record data.
-      log(`hp summary failed (${code}): ${stderr.trimEnd().split("\n").at(-1)?.trim() || "no error output"}`);
+      log(isDemo() ? "Demo summary could not load." : `hp summary failed (${code}): ${stderr.trimEnd().split("\n").at(-1)?.trim() || "no error output"}`);
       return null;
     }
     try {
@@ -93,7 +135,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     }
   });
 
-  ipcMain.handle("root:choose", async () => {
+  handle("root:choose", async () => {
     const window = getWindow();
     const picked = await dialog.showOpenDialog(window!, {
       title: "Choose the Clippi-Health data folder",
@@ -106,24 +148,24 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return appState();
   });
 
-  ipcMain.handle("build:run", async () => {
+  handle("build:run", async () => {
     const p = paths();
     const command = invocation(p, "build");
     if (!command) return { code: -1, error: "the bundled record engine was not found" };
-    log(`Rebuilding the local record in ${p.root}`);
-    const { code } = await run(command.cmd, command.args, { cwd: p.root, onLine: log, env: command.env });
+    log(isDemo() ? "Rebuilding Sally Seastar’s fictional record" : `Rebuilding the local record in ${p.root}`);
+    const { code } = await run(command.cmd, command.args, { cwd: p.root, onLine: isDemo() ? undefined : log, env: command.env });
     log(code === 0 ? "build finished" : `build failed (${code})`);
     return { code };
   });
 
-  ipcMain.handle("dashboard:open", async () => {
+  handle("dashboard:open", async () => {
     const p = paths();
     if (!existsSync(p.dashboard)) return "dashboard.html has not been built yet";
     await shell.openPath(p.dashboard);
     return null;
   });
 
-  ipcMain.handle("import:choose", async () => {
+  handle("import:choose", async () => {
     const window = getWindow();
     const picked = await dialog.showOpenDialog(window!, {
       title: "Add health data",
@@ -134,7 +176,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return planImport(paths(), picked.filePaths);
   });
 
-  ipcMain.handle("archive:choose", async () => {
+  handle("archive:choose", async () => {
     const window = getWindow();
     const picked = await dialog.showOpenDialog(window!, {
       title: "Choose an email or document export ZIP",
@@ -146,7 +188,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return planImport(paths(), picked.filePaths);
   });
 
-  ipcMain.handle("portal:choose", async () => {
+  handle("portal:choose", async () => {
     const window = getWindow();
     const picked = await dialog.showOpenDialog(window!, {
       title: "Choose the MyChart record download",
@@ -158,9 +200,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return planImport(paths(), picked.filePaths);
   });
 
-  ipcMain.handle("connectors:list", listConnectors);
+  handle("connectors:list", listConnectors);
 
-  ipcMain.handle("connectors:configure", async (_event, key: string, clientId: string) => {
+  handle("connectors:configure", async (_event, key: string, clientId: string) => {
     const p = paths();
     const command = invocation(p, "smart", ["configure", key, clientId]);
     if (!command) return { code: -1, error: "the bundled connector engine was not found" };
@@ -168,7 +210,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return { code, error: code === 0 ? undefined : stderr.trimEnd().split("\n").at(-1)?.trim() };
   });
 
-  ipcMain.handle("connectors:clear", async (_event, key: string) => {
+  handle("connectors:clear", async (_event, key: string) => {
     const p = paths();
     const command = invocation(p, "smart", ["clear", key]);
     if (!command) return { code: -1, error: "the bundled connector engine was not found" };
@@ -176,7 +218,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return { code, error: code === 0 ? undefined : stderr.trimEnd().split("\n").at(-1)?.trim() };
   });
 
-  ipcMain.handle("connectors:open-link", async (_event, key: string, kind: "portal" | "registration" | "help") => {
+  handle("connectors:open-link", async (_event, key: string, kind: "portal" | "registration" | "help") => {
     const connector = (await listConnectors()).find((item) => item.key === key);
     const value = kind === "portal" ? connector?.portal_url
       : kind === "help" ? connector?.manual_help_url
@@ -188,18 +230,18 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return null;
   });
 
-  ipcMain.handle("connectors:open-guide", async () => {
+  handle("connectors:open-guide", async () => {
     const guide = paths().root + "/docs/EPIC_REGISTRATION.md";
     if (!existsSync(guide)) return "The Epic registration checklist was not found.";
     return (await shell.openPath(guide)) || null;
   });
 
-  ipcMain.handle("connectors:connect", async (_event, key: string) => {
+  handle("connectors:connect", async (_event, key: string) => {
     const p = paths();
     const command = invocation(p, "smart", ["connect", key, "--no-build"]);
     if (!command) return { code: -1, error: "the bundled connector engine was not found" };
     log(`Starting local SMART connection: ${key}`);
-    const result = await run(command.cmd, command.args, { cwd: p.root, onLine: log, env: command.env });
+    const result = await run(command.cmd, command.args, { cwd: p.root, onLine: isDemo() ? undefined : log, env: command.env });
     if (result.code !== 0) return { code: result.code, error: result.stderr.trimEnd().split("\n").at(-1)?.trim() };
     const build = invocation(p, "build");
     if (!build) return { code: -1, error: "the bundled record engine was not found" };
@@ -207,26 +249,31 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return { code: built.code, error: built.code === 0 ? undefined : built.stderr.trimEnd().split("\n").at(-1)?.trim() };
   });
 
-  ipcMain.handle("import:apply", async (_event, plan: ImportPlan, replaceApple: boolean, rebuild: boolean) => {
+  handle("import:apply", async (_event, plan: ImportPlan, replaceApple: boolean, rebuild: boolean) => {
     const p = paths();
     for (const line of applyImport(p, plan, replaceApple)) log(line);
     if (!rebuild) return { code: 0 };
     const command = invocation(p, "build");
     if (!command) return { code: -1, error: "the bundled record engine was not found" };
-    const { code } = await run(command.cmd, command.args, { cwd: p.root, onLine: log, env: command.env });
+    const { code } = await run(command.cmd, command.args, { cwd: p.root, onLine: isDemo() ? undefined : log, env: command.env });
     log(code === 0 ? "build finished" : `build failed (${code})`);
     return { code };
   });
 
-  ipcMain.handle("doctor:run", () => doctor(paths()));
+  handle("doctor:run", () => isDemo() ? [
+    { check: "Isolated Sally Seastar demo folder", ok: getRoot() === demoRoot() },
+    { check: "Synthetic record database", ok: existsSync(paths().db) },
+    { check: "Demo dashboard", ok: existsSync(paths().dashboard) },
+    { check: "Personal imports, sign-ins and external windows disabled", ok: true },
+  ] : doctor(paths()));
 
-  ipcMain.handle("events:read", () => readEvents(paths()));
-  ipcMain.handle("events:write", (_event, rows: EventRow[]) => {
+  handle("events:read", () => readEvents(paths()));
+  handle("events:write", (_event, rows: EventRow[]) => {
     writeEvents(paths(), rows);
     return true;
   });
-  ipcMain.handle("notes:read", () => readNotes(paths()));
-  ipcMain.handle("notes:write", (_event, text: string) => {
+  handle("notes:read", () => readNotes(paths()));
+  handle("notes:write", (_event, text: string) => {
     writeNotes(paths(), text);
     return true;
   });

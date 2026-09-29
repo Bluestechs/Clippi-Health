@@ -13,6 +13,7 @@
     <h1>Clippi-Health</h1>
     <span class="who" id="who"></span>
     <span class="built" id="built"></span>
+    <button id="demo-toggle" class="ghost" type="button" title="Open Sally Seastar’s fictional record for a demonstration">Try demo</button>
     <div class="theme-picker" id="theme-picker">
       <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Choose color theme" aria-haspopup="menu" aria-expanded="false" title="Choose color theme"><span aria-hidden="true">🎨</span></button>
       <div id="theme-menu" class="theme-menu" role="menu" aria-label="Color theme" hidden>
@@ -31,6 +32,14 @@
     <button data-tab="doctor">Doctor</button>
   </nav>
 </header>
+
+<div id="demo-banner" hidden>Demo · Sally Seastar · All records and values are fictional. Imports and sign-ins are disabled.</div>
+<div id="mode-cover" role="status" aria-live="polite" hidden>
+  <h2 id="mode-message">Preparing Sally Seastar’s demo…</h2>
+  <p>Your records are hidden while the app switches folders.</p>
+  <button id="mode-retry" hidden>Try again</button>
+  <button id="mode-back" hidden>Return to current records</button>
+</div>
 
 <main>
   <section id="tab-dashboard">

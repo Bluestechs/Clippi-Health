@@ -7,6 +7,7 @@ const executable = resolve("runtime", "clippi-runtime", process.platform === "wi
 if (!existsSync(executable)) throw new Error(`Bundled runtime was not found at ${executable}`);
 
 const root = mkdtempSync(join(tmpdir(), "clippi-health-runtime-"));
+const demo = join(root, "demo");
 const env = { ...process.env, CLIPPI_HEALTH_ROOT: root };
 
 function run(args) {
@@ -32,7 +33,12 @@ try {
   }
   const marker = JSON.parse(readFileSync(join(root, "clippi-health.json"), "utf8"));
   if (marker.format !== "clippi-health-record-store") throw new Error("Runtime root marker is invalid");
-  console.log("Bundled runtime passed clean-store build, query, and connector checks.");
+  env.CLIPPI_HEALTH_ROOT = demo;
+  run(["demo"]);
+  const sample = JSON.parse(run(["query", "--json", "summary"]));
+  if (sample.patient?.firstName !== "Sally" || sample.labs !== 108) throw new Error("Bundled demo is incomplete");
+  run(["build"]);
+  console.log("Bundled runtime passed clean-store build, query, connector, and populated demo checks.");
 } finally {
   rmSync(root, { recursive: true, force: true });
 }

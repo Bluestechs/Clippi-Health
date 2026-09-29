@@ -4,9 +4,11 @@ import { app, BrowserWindow, net, protocol, shell } from "electron";
 import squirrelStartup from "electron-squirrel-startup";
 import { pathToFileURL } from "node:url";
 import { join, normalize, resolve, sep } from "node:path";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { registerIpc } from "./ipc";
 import { runSmoke } from "./smoke";
-import { getRoot } from "./roots";
+import { getRoot, isDemo, setRoot } from "./roots";
 
 if (squirrelStartup) app.quit();
 
@@ -17,6 +19,12 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 app.setName("Clippi-Health");
+// Smoke tests must never read the developer's data or change their saved mode.
+if (process.argv.includes("--smoke")) {
+  const temporary = mkdtempSync(join(tmpdir(), "clippi-health-smoke-store-"));
+  app.setPath("userData", temporary);
+  setRoot(join(temporary, "records"));
+}
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -38,6 +46,7 @@ function createWindow(): BrowserWindow {
   });
   window.loadFile(join(__dirname, "index.html"));
   window.webContents.setWindowOpenHandler(({ url }) => {
+    if (isDemo()) return { action: "deny" };
     shell.openExternal(url);
     return { action: "deny" };
   });

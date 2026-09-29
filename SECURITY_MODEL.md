@@ -38,6 +38,22 @@ Health records cross the main untrusted-input boundary only after the user selec
 
 ## Trust boundaries
 
+### Demonstration privacy
+
+The desktop **Try demo** mode uses a separate, marked store populated entirely by a seeded synthetic generator. Personal records are not inputs to generation. The persisted mode selects the store for queries, edits and dashboard serving; a missing demo store does not fall back to personal data. Switching requires idle IPC, hides the previous screen, and reloads the renderer to discard cached panels and logs. Generation failures retain the previous selection behind a privacy cover. Personal file imports, OAuth, source configuration, root changes and external windows are blocked in demo mode in both UI and main-process IPC. The generator refuses unmarked nonempty folders and symbolic links. Demo logs and diagnostics omit local filesystem paths.
+
+This is a recording aid, not an access-control boundary against the local account. Manually entered demo notes can contain whatever the user types. Other apps, an already-open standalone dashboard and an independently served Tailscale dashboard are outside this mode. The operating system and the user still control screen sharing. See [demo behavior and verification](docs/DEMO.md).
+
+```mermaid
+flowchart LR
+    G[Seeded synthetic generator] --> S[(Sally Seastar demo store)]
+    P[(Personal record store)] --> M{Persisted mode selector}
+    S --> M
+    M --> D[Desktop queries, edits and dashboard]
+    U[Explicit mode change] --> C[Idle check, privacy cover, renderer reload]
+    C --> M
+```
+
 | Boundary | Untrusted or privileged input | Primary controls |
 |---|---|---|
 | Imported records | ZIP members, FHIR, C-CDA/XML, PDF, DOCX, HTML, email and Apple Health data | Archives are read without extracting paths; SQL is parameterized; imported strings render as text; source provenance is retained |

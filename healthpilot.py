@@ -928,6 +928,7 @@ def build_dashboard(db):
              "o": org_short.get(r["source"], r["org"]), "p": r["path"], "x": r["text"] or "", "e": r["encounter_id"]}
             for r in rows(db, "SELECT * FROM documents ORDER BY date DESC")]
     data = {
+        "demo": (ROOT / ".clippi-demo.json").exists(),
         "generated": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "patient": patient,
         "sources": [dict(r, short=org_short[r["key"]]) for r in rows(db, "SELECT * FROM sources")],

@@ -4,6 +4,9 @@ Updated 2026-09-29.
 
 ## Working now
 
+- **Try demo** creates Sally Seastar's entirely synthetic diabetes record in a separate local store. A year of simulated CGM and daily device metrics, quarterly labs, notes and timeline events populate the app for recording. Mode persists across restart; returning to personal records requires confirmation. Imports, sign-ins and external windows are disabled in demo mode. The sample exercises the real import/build/chart pipeline, and smoke tests now use a disposable demo profile.
+- Populated demo coverage caught and fixed a stale care-team source lookup that could fail case-study generation when encounters included departments.
+
 - A local Python builder imports supported health-record sources into SQLite, searchable Markdown, CSV exports, cited reference documents, and an offline dashboard.
 - The Electron app provides in-app source management, rebuild controls, timeline-event and note editing, health checks, and dashboard viewing.
 - Local imports cover FHIR JSONL/NDJSON, C-CDA and IHE XDM packages, Apple Health exports, Gmail Takeout MBOX, EML, correspondence folders, and ordinary document archives.
@@ -33,4 +36,4 @@ Updated 2026-09-29.
 
 ## Verification
 
-The current source catalog passes 24 Python unit tests, Electron type checking, 47 Electron component tests, the distribution PII audit, and the production-dependency audit. The bundled native engine passed build/query/connector checks from a clean data directory. GitHub Actions run 36618736252 built and verified DMG/ZIP artifacts for both Mac architectures, a Windows Squirrel installer, and Linux DEB/ZIP artifacts from commit `ed4c846`. A locally built macOS Apple Silicon app also passed strict bundle-signature verification and full UI screenshot smoke coverage across every tab and both explicit themes. Evaluation macOS artifacts are ad-hoc signed and Windows artifacts are unsigned until production credentials are configured.
+The current source catalog passes 26 Python unit tests, Electron type checking, 53 Electron component tests, the distribution PII audit, and the production-dependency audit. The bundled native engine passed build/query/connector checks from a clean data directory and generation/rebuild of the populated Sally Seastar demo. Both source and packaged desktop smoke runs passed all tabs, both explicit themes and CGM chart zoom checks using disposable profiles. GitHub Actions run 36618736252 built and verified DMG/ZIP artifacts for both Mac architectures, a Windows Squirrel installer, and Linux DEB/ZIP artifacts from commit `ed4c846`. A locally built macOS Apple Silicon app also passed strict bundle-signature verification and full UI screenshot smoke coverage across every tab and both explicit themes. Evaluation macOS artifacts are ad-hoc signed and Windows artifacts are unsigned until production credentials are configured.

@@ -21,6 +21,8 @@ The public product name is **Clippi-Health**. Existing `hp`, `healthpilot.py`, `
 
 All medical data is ignored by Git. Source data stays under `raw/` or `email/`; generated data stays under `data/` and `dashboard.html`.
 
+For a walkthrough or video, select **Try demo** in the desktop app. Sally Seastar's entirely fictional diabetes record fills the charts and record views in a separate local store. **Exit demo** returns to your records. See the [demo walkthrough](docs/DEMO.md).
+
 ## Supported inputs
 
 - **FHIR records (JSONL/NDJSON):** direct SMART-on-FHIR downloads and user-supplied exports under `raw/fhir/<source>/`. Every resource is retained in `fhir_resources`; common clinical resources are also projected into labs, encounters, conditions, procedures, medications, immunizations, allergies, and documents.

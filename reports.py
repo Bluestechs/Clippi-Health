@@ -792,12 +792,12 @@ def build_case_study(db):
         L.append("")
 
     L.append("## Care team (departments seen, most recent first)\n")
-    care = q(db, "SELECT dept, count(*) n, min(date) first, max(date) last, group_concat(DISTINCT provider) providers, source "
-                 "FROM encounters WHERE date <= ? AND dept IS NOT NULL GROUP BY dept ORDER BY last DESC LIMIT 25", TODAY)
+    care = q(db, "SELECT dept, count(*) n, min(date) first, max(date) last, group_concat(DISTINCT provider) providers, source, org "
+                 "FROM encounters WHERE date <= ? AND dept IS NOT NULL GROUP BY dept, source, org ORDER BY last DESC LIMIT 25", TODAY)
     for c in care:
         provs = [p for p in (c["providers"] or "").split(",") if p and not p.startswith("Nurse")][:3]
         c["providers"] = ", ".join(provs)
-        c["src"] = SHORT.get(c["source"], c["source"])
+        c["src"] = short_org(c["org"], c["source"])
     L.append(md_table(care, ["dept", "n", "first", "last", "providers", "src"], ["Department", "Visits", "First", "Last", "Clinicians", "Source"]))
     L.append("")
 
