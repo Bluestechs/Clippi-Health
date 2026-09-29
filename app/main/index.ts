@@ -2,7 +2,6 @@
 // healthpilot.py rebuilds data/ and dashboard.html, nothing leaves the machine.
 import { app, BrowserWindow, net, protocol, shell } from "electron";
 import squirrelStartup from "electron-squirrel-startup";
-import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { join, normalize, resolve, sep } from "node:path";
 import { registerIpc } from "./ipc";
@@ -62,7 +61,7 @@ app.whenReady().then(async () => {
   mainWindow = createWindow();
 
   if (process.argv.includes("--smoke")) {
-    await runSmoke(mainWindow, resolve(tmpdir(), "clippi-health-smoke"));
+    await runSmoke(mainWindow);
     app.quit();
     return;
   }

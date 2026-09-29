@@ -1,14 +1,21 @@
 // `npm run smoke` drives the shell through every tab and writes a screenshot of each, so a change
 // to the UI can be looked at without a portal login or a rebuild.
 import type { BrowserWindow } from "electron";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { delay } from "./proc";
 
 const TABS = ["dashboard", "import", "build", "events", "notes", "doctor"];
 
-export async function runSmoke(window: BrowserWindow, outDir: string): Promise<void> {
-  mkdirSync(outDir, { recursive: true });
+function writePrivateScreenshot(file: string, data: Buffer): void {
+  writeFileSync(file, data, { flag: "wx", mode: 0o600 });
+}
+
+export async function runSmoke(window: BrowserWindow): Promise<void> {
+  const outDir = mkdtempSync(join(tmpdir(), "clippi-health-smoke-"));
+  chmodSync(outDir, 0o700);
+  process.stdout.write(`saving private smoke screenshots in ${outDir}\n`);
   if (window.webContents.isLoadingMainFrame()) {
     const { promise, resolve } = Promise.withResolvers<void>();
     window.webContents.once("did-finish-load", () => resolve());
@@ -19,7 +26,7 @@ export async function runSmoke(window: BrowserWindow, outDir: string): Promise<v
     await delay(1500); // the dashboard iframe inlines Plotly, so give it a paint
     const image = await window.webContents.capturePage();
     const file = join(outDir, `${tab}.png`);
-    writeFileSync(file, image.toPNG());
+    writePrivateScreenshot(file, image.toPNG());
     process.stdout.write(`captured ${file}\n`);
   }
   for (const theme of ["light", "dark"]) {
@@ -30,7 +37,7 @@ export async function runSmoke(window: BrowserWindow, outDir: string): Promise<v
     await delay(500);
     const image = await window.webContents.capturePage();
     const file = join(outDir, `import-${theme}.png`);
-    writeFileSync(file, image.toPNG());
+    writePrivateScreenshot(file, image.toPNG());
     process.stdout.write(`captured ${file}\n`);
   }
   await window.webContents.executeJavaScript(`(() => {
@@ -48,7 +55,7 @@ export async function runSmoke(window: BrowserWindow, outDir: string): Promise<v
   process.stdout.write(`connector cards ${JSON.stringify(connectorNames)}\n`);
   const connector = await window.webContents.capturePage();
   const connectorFile = join(outDir, "connector-light.png");
-  writeFileSync(connectorFile, connector.toPNG());
+  writePrivateScreenshot(connectorFile, connector.toPNG());
   process.stdout.write(`captured ${connectorFile}\n`);
   const themeMenuState = await window.webContents.executeJavaScript(`(() => {
     document.querySelector('[data-theme-value="light"]').click();
@@ -65,7 +72,7 @@ export async function runSmoke(window: BrowserWindow, outDir: string): Promise<v
   await delay(250);
   const themeMenu = await window.webContents.capturePage();
   const themeMenuFile = join(outDir, "theme-menu.png");
-  writeFileSync(themeMenuFile, themeMenu.toPNG());
+  writePrivateScreenshot(themeMenuFile, themeMenu.toPNG());
   process.stdout.write(`captured ${themeMenuFile}\n`);
   await window.webContents.executeJavaScript(`(() => {
     document.querySelector('[data-theme-value="system"]').click();

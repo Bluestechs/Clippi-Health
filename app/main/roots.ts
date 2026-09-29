@@ -45,8 +45,14 @@ export function initializeRoot(root: string): void {
     mkdirSync(join(root, child), { recursive: true });
   }
   const marker = join(root, ROOT_MARKER);
-  if (!existsSync(marker)) {
-    writeFileSync(marker, JSON.stringify({ format: "clippi-health-record-store", version: 1 }, null, 2) + "\n");
+  try {
+    writeFileSync(marker, JSON.stringify({ format: "clippi-health-record-store", version: 1 }, null, 2) + "\n", {
+      encoding: "utf8",
+      flag: "wx",
+      mode: 0o600,
+    });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
   }
 }
 

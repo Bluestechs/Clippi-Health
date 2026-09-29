@@ -91,11 +91,13 @@ flowchart TB
 - The preload exposes a small, named API instead of Electron or Node primitives.
 - Content Security Policy limits renderer resources, and imported values are inserted with `textContent` or text nodes.
 - Python processes use fixed executable paths and argument arrays without a command shell.
+- Developer smoke screenshots are created under a random private directory with exclusive `0600` files because they can contain rendered health data.
 
 ### Record processing
 
 - ZIP and document archives are inspected in place rather than extracted to attacker-selected paths.
 - Database operations use parameterized SQL for imported values and ordinary queries.
+- Record-store marker creation is exclusive and atomic, avoiding a check-then-write filesystem race.
 - Generated dashboard JSON escapes script terminators before embedding.
 - Original resources and provenance are retained so normalized data can be traced back to evidence.
 
@@ -150,6 +152,6 @@ Plotly references: [GHSA-wjc4-73q6-gv3m](https://github.com/advisories/GHSA-wjc4
 
 ## Assessment record
 
-The source scan reviewed commit `3cc8818cadf04ab6d92e0d8fbb04433f3d530d59` and used a repository-wide static analysis followed by live npm and Python advisory checks. Seven security surfaces were inventoried: Electron boundaries, import parsers, SMART OAuth, dashboard generation, local CLI/server behavior, packaging/release, and dependency manifests. The one source finding—mutable GitHub Action references—was remediated in the follow-up changes documented above.
+The source scan reviewed commit `3cc8818cadf04ab6d92e0d8fbb04433f3d530d59` and used a repository-wide static analysis followed by live npm and Python advisory checks. Seven security surfaces were inventoried: Electron boundaries, import parsers, SMART OAuth, dashboard generation, local CLI/server behavior, packaging/release, and dependency manifests. The source finding—mutable GitHub Action references—was remediated in the follow-up changes documented above. The first live CodeQL run additionally identified predictable smoke screenshot paths and check-then-write marker creation; both were hardened. Its clear-text finding covers the intended output of the local `hp summary` command, which displays the user's requested patient summary directly to that same user rather than writing a log.
 
 This document describes the architecture and controls at the time of its last update. `SECURITY.md` contains the private reporting process.
