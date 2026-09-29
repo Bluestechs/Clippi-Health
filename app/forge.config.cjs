@@ -110,6 +110,7 @@ module.exports = {
       config: {
         options: {
           name: "clippi-health",
+          bin: "Clippi-Health",
           productName: "Clippi-Health",
           maintainer: "Clippi-Health contributors",
           homepage: "https://github.com/bennydogg/clippi-health",
