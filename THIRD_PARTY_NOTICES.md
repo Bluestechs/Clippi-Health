@@ -22,3 +22,24 @@ recorded in `app/package-lock.json`. The source distribution does not contain
 `node_modules`. App packages must preserve the licenses and notices that ship
 with the Electron runtime and its bundled components, including Chromium, and
 must be inspected before release as described in `DISTRIBUTION.md`.
+
+## CPython
+
+Desktop packages include the CPython interpreter and standard library used to
+build that operating system's local record engine. CPython is distributed under
+the Python Software Foundation License Version 2 and its included historical
+license notices. The complete notice is included at
+`vendor/LICENSE.python.txt` and copied into app builds.
+
+## PyInstaller bootloader
+
+Desktop packages use the PyInstaller 6.22.3 bootloader. PyInstaller is licensed
+under GPL-2.0-or-later with its bootloader exception, which permits distribution
+of applications built with PyInstaller. The complete license and exception are
+included at `vendor/LICENSE.pyinstaller.txt` and copied into app builds.
+
+## pypdf
+
+Desktop packages include pypdf 6.7.0 for portable PDF text extraction. pypdf is
+licensed under the BSD 3-Clause License. The complete license is included at
+`vendor/LICENSE.pypdf.txt` and copied into app builds.

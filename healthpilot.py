@@ -30,14 +30,16 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+SOURCE_ROOT = Path(__file__).resolve().parent
+ROOT = Path(os.environ.get("CLIPPI_HEALTH_ROOT", SOURCE_ROOT)).expanduser().resolve()
+RESOURCES = Path(os.environ.get("CLIPPI_HEALTH_RESOURCES", SOURCE_ROOT)).expanduser().resolve()
 RAW = ROOT / "raw"
 DATA = ROOT / "data"
 DB_PATH = DATA / "health.db"
 DASHBOARD = ROOT / "dashboard.html"
-TEMPLATE = ROOT / "scripts" / "dashboard_template.html"
-PLOTLY = ROOT / "vendor" / "plotly-basic.min.js"
-PDFTEXT = ROOT / "scripts" / "pdftext.swift"
+TEMPLATE = RESOURCES / "scripts" / "dashboard_template.html"
+PLOTLY = RESOURCES / "vendor" / "plotly-basic.min.js"
+PDFTEXT = RESOURCES / "scripts" / "pdftext.swift"
 CURATED = ROOT / "curated_events.csv"
 
 LANES = ["Diagnoses", "Symptoms", "Treatments", "Surgery & procedures", "Hospital & ED", "Imaging", "Pathology & reports", "Milestones"]
@@ -360,14 +362,23 @@ def pdf_text(path):
     cached = cache_dir / f"{digest}.txt"
     if cached.exists():
         return cached.read_text()
-    module_cache = Path(tempfile.gettempdir()) / "healthpilot-swift-cache"
-    env = dict(os.environ, CLANG_MODULE_CACHE_PATH=str(module_cache))
+    text = ""
     try:
-        out = subprocess.run(["swift", "-module-cache-path", str(module_cache), str(PDFTEXT), str(path)],
-                             capture_output=True, text=True, timeout=120, env=env)
-        text = out.stdout.strip() if out.returncode == 0 else ""
-    except (OSError, subprocess.TimeoutExpired):
-        text = ""
+        from pypdf import PdfReader
+        text = "\n\n".join(page.extract_text() or "" for page in PdfReader(path).pages).strip()
+    except Exception:
+        # PDFs are untrusted imports. An unsupported or malformed file remains available as a
+        # source document even when the portable extractor cannot read its text.
+        pass
+    if not text and PDFTEXT.exists():
+        module_cache = Path(tempfile.gettempdir()) / "healthpilot-swift-cache"
+        env = dict(os.environ, CLANG_MODULE_CACHE_PATH=str(module_cache))
+        try:
+            out = subprocess.run(["swift", "-module-cache-path", str(module_cache), str(PDFTEXT), str(path)],
+                                 capture_output=True, text=True, timeout=120, env=env)
+            text = out.stdout.strip() if out.returncode == 0 else ""
+        except (OSError, subprocess.TimeoutExpired):
+            text = ""
     if text:
         cached.write_text(text)
     return text

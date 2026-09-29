@@ -5,8 +5,9 @@ import { existsSync } from "node:fs";
 import { doctor } from "./doctor";
 import { applyImport, planImport, type ImportPlan } from "./importer";
 import { readEvents, readNotes, writeEvents, writeNotes, type EventRow } from "./inputs";
-import { findTool, run } from "./proc";
+import { run } from "./proc";
 import { defaultRoot, getRoot, isRoot, paths, setRoot } from "./roots";
+import { invocation } from "./runtime";
 
 export type AppState = {
   root: string;
@@ -55,9 +56,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   const listConnectors = async (): Promise<Connector[]> => {
     const p = paths();
-    const python = findTool("python3");
-    if (!python || !existsSync(p.smartConnector)) return [];
-    const { code, stdout, stderr } = await run(python, [p.smartConnector, "list", "--json"], { cwd: p.root });
+    const command = invocation(p, "smart", ["list", "--json"]);
+    if (!command) return [];
+    const { code, stdout, stderr } = await run(command.cmd, command.args, { cwd: p.root, env: command.env });
     if (code !== 0) {
       log(`connector list failed (${code}): ${stderr.trimEnd().split("\n").at(-1)?.trim() || "no error output"}`);
       return [];
@@ -74,11 +75,11 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   ipcMain.handle("summary:get", async () => {
     const p = paths();
-    const python = findTool("python3");
-    if (!python || !existsSync(p.db)) return null;
+    const command = invocation(p, "query", ["--json", "summary"]);
+    if (!command || !existsSync(p.db)) return null;
     // `--json` belongs to `hp`, before the subcommand; `hp summary --json` exits 2. Only stdout is
     // parsed: a warning on stderr would otherwise make every summary unreadable.
-    const { code, stdout, stderr } = await run(python, [p.cli, "--json", "summary"], { cwd: p.root });
+    const { code, stdout, stderr } = await run(command.cmd, command.args, { cwd: p.root, env: command.env });
     if (code !== 0) {
       // Never log stdout here: on any failure path it may still hold record data.
       log(`hp summary failed (${code}): ${stderr.trimEnd().split("\n").at(-1)?.trim() || "no error output"}`);
@@ -107,10 +108,10 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   ipcMain.handle("build:run", async () => {
     const p = paths();
-    const python = findTool("python3");
-    if (!python) return { code: -1, error: "python3 was not found" };
-    log(`$ python3 healthpilot.py   (in ${p.root})`);
-    const { code } = await run(python, [p.builder], { cwd: p.root, onLine: log });
+    const command = invocation(p, "build");
+    if (!command) return { code: -1, error: "the bundled record engine was not found" };
+    log(`Rebuilding the local record in ${p.root}`);
+    const { code } = await run(command.cmd, command.args, { cwd: p.root, onLine: log, env: command.env });
     log(code === 0 ? "build finished" : `build failed (${code})`);
     return { code };
   });
@@ -161,19 +162,17 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   ipcMain.handle("connectors:configure", async (_event, key: string, clientId: string) => {
     const p = paths();
-    const python = findTool("python3");
-    if (!python) return { code: -1, error: "python3 was not found" };
-    if (!existsSync(p.smartConnector)) return { code: -1, error: "smart_connect.py was not found" };
-    const { code, stderr } = await run(python, [p.smartConnector, "configure", key, clientId], { cwd: p.root });
+    const command = invocation(p, "smart", ["configure", key, clientId]);
+    if (!command) return { code: -1, error: "the bundled connector engine was not found" };
+    const { code, stderr } = await run(command.cmd, command.args, { cwd: p.root, env: command.env });
     return { code, error: code === 0 ? undefined : stderr.trimEnd().split("\n").at(-1)?.trim() };
   });
 
   ipcMain.handle("connectors:clear", async (_event, key: string) => {
     const p = paths();
-    const python = findTool("python3");
-    if (!python) return { code: -1, error: "python3 was not found" };
-    if (!existsSync(p.smartConnector)) return { code: -1, error: "smart_connect.py was not found" };
-    const { code, stderr } = await run(python, [p.smartConnector, "clear", key], { cwd: p.root });
+    const command = invocation(p, "smart", ["clear", key]);
+    if (!command) return { code: -1, error: "the bundled connector engine was not found" };
+    const { code, stderr } = await run(command.cmd, command.args, { cwd: p.root, env: command.env });
     return { code, error: code === 0 ? undefined : stderr.trimEnd().split("\n").at(-1)?.trim() };
   });
 
@@ -197,21 +196,24 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   ipcMain.handle("connectors:connect", async (_event, key: string) => {
     const p = paths();
-    const python = findTool("python3");
-    if (!python) return { code: -1, error: "python3 was not found" };
-    if (!existsSync(p.smartConnector)) return { code: -1, error: "smart_connect.py was not found" };
+    const command = invocation(p, "smart", ["connect", key, "--no-build"]);
+    if (!command) return { code: -1, error: "the bundled connector engine was not found" };
     log(`Starting local SMART connection: ${key}`);
-    const { code, stderr } = await run(python, [p.smartConnector, "connect", key], { cwd: p.root, onLine: log });
-    return { code, error: code === 0 ? undefined : stderr.trimEnd().split("\n").at(-1)?.trim() };
+    const result = await run(command.cmd, command.args, { cwd: p.root, onLine: log, env: command.env });
+    if (result.code !== 0) return { code: result.code, error: result.stderr.trimEnd().split("\n").at(-1)?.trim() };
+    const build = invocation(p, "build");
+    if (!build) return { code: -1, error: "the bundled record engine was not found" };
+    const built = await run(build.cmd, build.args, { cwd: p.root, onLine: log, env: build.env });
+    return { code: built.code, error: built.code === 0 ? undefined : built.stderr.trimEnd().split("\n").at(-1)?.trim() };
   });
 
   ipcMain.handle("import:apply", async (_event, plan: ImportPlan, replaceApple: boolean, rebuild: boolean) => {
     const p = paths();
     for (const line of applyImport(p, plan, replaceApple)) log(line);
     if (!rebuild) return { code: 0 };
-    const python = findTool("python3");
-    if (!python) return { code: -1, error: "python3 was not found" };
-    const { code } = await run(python, [p.builder], { cwd: p.root, onLine: log });
+    const command = invocation(p, "build");
+    if (!command) return { code: -1, error: "the bundled record engine was not found" };
+    const { code } = await run(command.cmd, command.args, { cwd: p.root, onLine: log, env: command.env });
     log(code === 0 ? "build finished" : `build failed (${code})`);
     return { code };
   });

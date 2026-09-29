@@ -4,6 +4,11 @@
   "license": "Apache-2.0",
   "version": "0.1.0",
   "private": true,
+  "author": "Clippi-Health contributors",
+  "homepage": "https://github.com/bennydogg/clippi-health",
+  "engines": {
+    "node": ">=22 <23"
+  },
   "description": "Local desktop front door for Clippi-Health: standards-based health-record import, rebuild, and dashboard",
   "main": "dist/main.js",
   "files": [
@@ -13,19 +18,39 @@
   "scripts": {
     "build": "node build.mjs",
     "start": "node build.mjs && electron .",
+    "runtime:prepare": "node prepare-runtime.mjs",
+    "runtime:check": "node verify-runtime.mjs",
+    "package": "node build.mjs && npm run runtime:prepare && npm run runtime:check && electron-forge package",
+    "make": "node build.mjs && npm run runtime:prepare && npm run runtime:check && electron-forge make",
     "typecheck": "tsc --noEmit",
     "smoke": "node build.mjs && electron . --smoke",
     "test": "vitest run"
   },
   "devDependencies": {
+    "@electron-forge/cli": "^7.11.2",
+    "@electron-forge/maker-deb": "^7.11.2",
+    "@electron-forge/maker-dmg": "^7.11.2",
+    "@electron-forge/maker-squirrel": "^7.11.2",
+    "@electron-forge/maker-zip": "^7.11.2",
+    "@electron-forge/plugin-fuses": "^7.11.2",
+    "@electron/fuses": "^1.8.0",
     "@types/node": "^24.0.0",
     "electron": "^44.4.5",
     "esbuild": "^0.25.0",
+    "plist": "^3.1.0",
+    "png2icons": "^2.0.1",
     "typescript": "^5.7.3",
     "vitest": "^4.1.11"
   },
   "allowScripts": {
     "electron@44.4.5": true,
-    "esbuild@0.25.12": true
+    "electron-winstaller@5.4.4": true,
+    "esbuild@0.25.12": true,
+    "fsevents@2.3.3": true,
+    "fs-xattr@0.3.1": true,
+    "macos-alias@0.2.12": true
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1"
   }
 }

@@ -43,3 +43,6 @@ await cp("../assets/clippi-health-logo.png", "dist/logo.png");
 await cp("../LICENSE", "dist/LICENSE");
 await cp("../THIRD_PARTY_NOTICES.md", "dist/THIRD_PARTY_NOTICES.md");
 await cp("../vendor/LICENSE.plotly.js.txt", "dist/LICENSE.plotly.js.txt");
+await cp("../vendor/LICENSE.python.txt", "dist/LICENSE.python.txt");
+await cp("../vendor/LICENSE.pyinstaller.txt", "dist/LICENSE.pyinstaller.txt");
+await cp("../vendor/LICENSE.pypdf.txt", "dist/LICENSE.pypdf.txt");

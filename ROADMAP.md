@@ -14,17 +14,16 @@ Clippi-Health is local-first. It will not operate or depend on a hosted Clippi-H
 
 ## Cross-platform desktop
 
-- Run the builder, CLI, connector helper, and Electron app in CI on current macOS, Windows, and Linux.
-- Replace macOS-only PDFKit extraction with a bundled, portable extractor and keep OCR optional.
+- Validate the native installer jobs on current macOS, Windows, and Linux GitHub runners and resolve any target-specific failures found there.
 - Normalize browser launching, loopback OAuth callbacks, paths, permissions, encodings, long paths, and process lifecycle across all three operating systems.
 - Remove assumptions about Homebrew, Xcode tools, Apple Health, and macOS LaunchAgents from the core workflow.
 - Give future iOS and Android clients the same Clippi logo and System/Paper/Dark theme choices as the desktop app.
 
 ## Installation for non-technical users
 
-- Package signed, notarized macOS `.dmg` and/or `.pkg` downloads.
-- Package a signed Windows installer and a straightforward Linux AppImage/Flatpak option.
-- Bundle the runtime, connector helper, and rebuild logic so installation does not require Python, Node, Docker, or a terminal.
+- Add the Apple Developer ID certificate and notarization key to GitHub, then validate and publish the prepared signed `.dmg` release job.
+- Complete Microsoft Artifact Signing identity validation and repository OIDC setup, then validate the prepared signed Windows installer job.
+- Add a Linux AppImage or Flatpak alongside the existing `.deb` and ZIP packages if community demand justifies the extra format.
 - Add first-run source connection, data-folder selection, update checks, repair, and uninstall behavior.
 
 ## Android and non-Apple health data

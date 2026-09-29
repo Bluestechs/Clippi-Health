@@ -16,6 +16,11 @@ __pycache__/
 # app build output; smoke screenshots show the owner's dashboard
 app/node_modules/
 app/dist/
+app/out/
+app/runtime/
+app/.runtime-build/
+electron-windows-sign.log
+.env.trustedsigning
 app/test/.smoke/
 # one-page case orientation (PHI)
 README_first.md

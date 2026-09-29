@@ -73,17 +73,19 @@ Developer commands:
 
 The complete trust boundary and provider-profile format are documented in [`docs/CONNECTORS.md`](docs/CONNECTORS.md). The exact Epic owner checklist is in [`docs/EPIC_REGISTRATION.md`](docs/EPIC_REGISTRATION.md). Production provider registrations and installer work are tracked in [`ROADMAP.md`](ROADMAP.md).
 
-## Desktop app
+## Desktop app and installers
 
 The Electron app imports local files, rebuilds the database, edits curated events and notes, and reads the dashboard:
 
 ```bash
 cd app
-npm install
+npm ci
 npm start
 ```
 
-See [`app/README.md`](app/README.md). Packaging and cross-platform installers are roadmap work.
+Release builds bundle the Python record engine, portable PDF extraction, connector catalog, and dashboard assets. An installed app therefore does not require Python, Node, Git, or a terminal. It creates a private local record store on first launch; the user manages sources from the app.
+
+The repository can currently produce `.dmg`, Windows Squirrel, `.deb`, and ZIP artifacts through the manual **Installer builds** workflow. Those artifacts are for clean-machine evaluation because they are not publisher-signed. The **Signed release** workflow fails closed unless Apple notarization and Microsoft Artifact Signing are configured, then creates a draft GitHub release for final review. See [`app/README.md`](app/README.md) and [`docs/RELEASING.md`](docs/RELEASING.md).
 
 Before publishing a source archive or desktop package, follow [`DISTRIBUTION.md`](DISTRIBUTION.md) and run `python3 scripts/audit_distribution.py`. Never ZIP a working data folder: ignored source records and generated outputs can still be present on disk.
 
@@ -112,6 +114,7 @@ email_records.py      local correspondence and OCR-evidence importer
 reports.py            generated data dictionary and cited case study
 hp                    command-line front door
 app/                  Electron desktop shell
+packaging/            self-contained Python runtime definition
 scripts/              dashboard, PDF, redaction, and serving helpers
 vendor/               third-party browser assets with their own licenses
 ```

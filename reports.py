@@ -10,6 +10,7 @@ Imported by healthpilot.py after each build. Run directly to regenerate from an 
     python3 reports.py
 """
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -17,7 +18,8 @@ from collections import OrderedDict, defaultdict
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+SOURCE_ROOT = Path(__file__).resolve().parent
+ROOT = Path(os.environ.get("CLIPPI_HEALTH_ROOT", SOURCE_ROOT)).expanduser().resolve()
 DATA = ROOT / "data"
 DB_PATH = DATA / "health.db"
 TOPICS_PATH = ROOT / "topics.json"

@@ -29,7 +29,9 @@ Querying
 Read data/DATA_DICTIONARY.md for what the tables mean. Nothing here interprets results.
 """
 import argparse
+import importlib.util
 import json
+import os
 import re
 import shutil
 import sqlite3
@@ -39,7 +41,8 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+SOURCE_ROOT = Path(__file__).resolve().parent
+ROOT = Path(os.environ.get("CLIPPI_HEALTH_ROOT", SOURCE_ROOT)).expanduser().resolve()
 DB_PATH = ROOT / "data" / "health.db"
 RAW = ROOT / "raw"
 sys.path.insert(0, str(ROOT))
@@ -170,13 +173,15 @@ def cmd_doctor(_db, args):
         ok("sqlite with FTS5", True)
     except sqlite3.OperationalError:
         ok("sqlite with FTS5", False, "full-text search needs an FTS5-enabled SQLite (macOS system Python has it)")
-    ok("swift (PDF text extraction)", bool(shutil.which("swift")), "xcode-select --install")
+    pdf_engine = "pypdf" if importlib.util.find_spec("pypdf") else ("PDFKit" if shutil.which("swift") else "")
+    ok(f"PDF text extraction{f' ({pdf_engine})' if pdf_engine else ''}", bool(pdf_engine),
+       "install pypdf, or use the desktop app with its bundled record engine")
     fhir = list((RAW / "fhir").glob("*/healthpilot-source.json")) if (RAW / "fhir").exists() else []
     if fhir:
         ok(f"FHIR sources ({len(fhir)})", True)
     zips = list((RAW / "apple").glob("*.zip")) if (RAW / "apple").exists() else []
     ok("Apple Health export" + (f" ({zips[0].name}, {datetime.fromtimestamp(zips[0].stat().st_mtime):%Y-%m-%d})" if zips else ""), bool(zips),
-       "iPhone → Health → profile → Export All Health Data, then ./hp add <zip>")
+       "iPhone → Health → profile → Export All Health Data, then add the ZIP in Sources")
     if DB_PATH.exists():
         built = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True).execute("SELECT value FROM meta WHERE key='built_at'").fetchone()
         ok(f"data/health.db (built {built[0] if built else '?'})", True)

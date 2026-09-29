@@ -6,9 +6,11 @@ The unlicensed browser exporter and its saved portal sessions have been removed.
 
 ## Prerequisites
 
-- Node.js for the Electron development build.
-- Python 3.9+ for the record builder.
-- On macOS, Swift/PDFKit improves PDF text extraction. Portable PDF extraction is roadmap work.
+- Node.js 22 for development and packaging.
+- Python 3.9+ for source development.
+- PyInstaller and pypdf from `../packaging/requirements-build.txt` when producing a self-contained package.
+
+People installing a release do not need these tools. The packaged app includes the record engine and portable PDF extraction.
 
 ## Run and test
 
@@ -21,7 +23,17 @@ npm test
 npm run smoke
 ```
 
-The app is currently a development build and has no signed installer.
+To make an installer on the current operating system:
+
+```bash
+python3 -m pip install -r ../packaging/requirements-build.txt
+npm ci
+npm run make
+```
+
+Artifacts are written under `out/make/`. PyInstaller is deliberately run on each target operating system rather than cross-compiled. The GitHub **Installer builds** workflow exercises macOS Apple Silicon, macOS Intel, Windows x64, and Linux x64. Locally produced macOS apps receive an ad-hoc signature so the bundle is internally valid; evaluation macOS and Windows artifacts still lack a trusted publisher identity.
+
+The tag-driven production workflow requires Apple Developer ID signing plus notarization and Microsoft Artifact Signing. It creates a draft release only after every platform succeeds. See [`../docs/RELEASING.md`](../docs/RELEASING.md).
 
 The palette button in the upper-right corner offers **System**, **Light · Paper**, and **Dark** without occupying the header with a permanent selector. Paper uses a lower-glare warm canvas with high-contrast text and stronger card/control separation; Dark preserves Clippi-Health's original dark palette. The saved local preference also applies to the dashboard inside the app.
 
@@ -36,6 +48,6 @@ The palette button in the upper-right corner offers **System**, **Light · Paper
 
 ## State and privacy
 
-The selected data-folder path is stored in Electron's user-data directory. Medical sources and generated outputs stay in the chosen Clippi-Health folder and are ignored by Git. The app has no telemetry.
+On first launch, an installed app creates its record store under the operating system's per-user application-data directory. A user can choose another folder from **Doctor**. The selected path is stored in Electron's user-data directory. Medical sources and generated outputs stay in that local folder. The app has no telemetry.
 
 Clippi-Health has no hosted account, callback service, connector relay, or telemetry endpoint. Provider profiles must use public-client OAuth with PKCE; client secrets are forbidden. Tokens remain in the local helper's memory for one import and are discarded when it exits. See [`../docs/CONNECTORS.md`](../docs/CONNECTORS.md).

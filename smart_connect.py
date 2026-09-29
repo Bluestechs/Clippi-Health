@@ -27,8 +27,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent
-CONNECTORS = ROOT / "connectors"
+SOURCE_ROOT = Path(__file__).resolve().parent
+ROOT = Path(os.environ.get("CLIPPI_HEALTH_ROOT", SOURCE_ROOT)).expanduser().resolve()
+RESOURCES = Path(os.environ.get("CLIPPI_HEALTH_RESOURCES", SOURCE_ROOT)).expanduser().resolve()
+CONNECTORS = RESOURCES / "connectors"
 LOCAL_CONNECTORS = ROOT / "raw" / "connectors"
 RAW_FHIR = ROOT / "raw" / "fhir"
 DEFAULT_TYPES = [

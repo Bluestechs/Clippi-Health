@@ -20,18 +20,34 @@ export type Paths = {
   builder: string;
   cli: string;
   smartConnector: string;
+  runtime: string;
 };
 
-/** The folder this build was shipped from: app/ sits inside the Clippi-Health folder. */
+const ROOT_MARKER = "clippi-health.json";
+
+/** Development uses the checkout; installed builds create a private writable record store. */
 export function defaultRoot(): string {
-  return resolve(app.getAppPath(), "..");
+  return app.isPackaged
+    ? join(app.getPath("userData"), "records")
+    : resolve(app.getAppPath(), "..");
 }
 
 const CONFIG_FILE = "config.json";
 
-/** A folder is a Clippi-Health root when the reference builder is there. */
+/** Existing source checkouts and initialized installed stores are both valid data roots. */
 export function isRoot(dir: string): boolean {
-  return existsSync(join(dir, "healthpilot.py"));
+  return existsSync(join(dir, "healthpilot.py")) || existsSync(join(dir, ROOT_MARKER));
+}
+
+export function initializeRoot(root: string): void {
+  mkdirSync(root, { recursive: true });
+  for (const child of ["raw/apple", "raw/imports", "raw/other", "raw/fhir", "data"]) {
+    mkdirSync(join(root, child), { recursive: true });
+  }
+  const marker = join(root, ROOT_MARKER);
+  if (!existsSync(marker)) {
+    writeFileSync(marker, JSON.stringify({ format: "clippi-health-record-store", version: 1 }, null, 2) + "\n");
+  }
 }
 
 export function getRoot(): string {
@@ -41,10 +57,13 @@ export function getRoot(): string {
   } catch {
     // no config yet, or unreadable — fall back to the folder we ship in
   }
-  return defaultRoot();
+  const root = defaultRoot();
+  initializeRoot(root);
+  return root;
 }
 
 export function setRoot(root: string): void {
+  initializeRoot(root);
   mkdirSync(app.getPath("userData"), { recursive: true });
   writeFileSync(join(app.getPath("userData"), CONFIG_FILE), JSON.stringify({ root }, null, 2) + "\n");
 }
@@ -66,5 +85,8 @@ export function paths(root = getRoot()): Paths {
     builder: join(root, "healthpilot.py"),
     cli: join(root, "hp"),
     smartConnector: join(root, "smart_connect.py"),
+    runtime: app.isPackaged
+      ? join(process.resourcesPath, "clippi-runtime", process.platform === "win32" ? "clippi-runtime.exe" : "clippi-runtime")
+      : "",
   };
 }

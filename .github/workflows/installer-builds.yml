@@ -1,0 +1,56 @@
+name: Installer builds
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS Apple Silicon
+            os: macos-15
+            artifact: macos-arm64-evaluation
+          - name: macOS Intel
+            os: macos-15-intel
+            artifact: macos-x64-evaluation
+          - name: Windows x64
+            os: windows-2025
+            artifact: windows-x64-evaluation
+          - name: Linux x64
+            os: ubuntu-24.04
+            artifact: linux-x64-evaluation
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12.12"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Install Linux packaging tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes fakeroot
+      - name: Install runtime builder
+        run: python -m pip install -r packaging/requirements-build.txt
+      - name: Install desktop dependencies
+        working-directory: app
+        run: npm ci
+      - name: Build and verify installer
+        working-directory: app
+        run: npm run make
+      - name: Upload evaluation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: app/out/make/**
+          if-no-files-found: error
+          retention-days: 7

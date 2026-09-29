@@ -36,7 +36,7 @@ def main() -> int:
     for name in release_source_files():
         if any(pattern.search(name) for pattern in SENSITIVE_PATHS):
             findings.append(f"sensitive tracked path: {name}")
-        if name in SKIP_CONTENT:
+        if name in SKIP_CONTENT or name.startswith("vendor/LICENSE."):
             continue
         path = ROOT / name
         try:

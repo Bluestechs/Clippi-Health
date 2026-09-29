@@ -1,12 +1,17 @@
 // Clippi-Health desktop app. Everything it produces is the same as the CLI's: raw/ gets files,
 // healthpilot.py rebuilds data/ and dashboard.html, nothing leaves the machine.
 import { app, BrowserWindow, net, protocol, shell } from "electron";
+import squirrelStartup from "electron-squirrel-startup";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { join, normalize, resolve, sep } from "node:path";
 import { registerIpc } from "./ipc";
 import { runSmoke } from "./smoke";
 import { getRoot } from "./roots";
+
+if (squirrelStartup) app.quit();
+
+if (process.platform === "win32") app.setAppUserModelId("io.github.bennydogg.clippihealth");
 
 protocol.registerSchemesAsPrivileged([
   { scheme: "hp", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },

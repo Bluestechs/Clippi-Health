@@ -23,6 +23,7 @@ export function makePaths(root: string): Paths {
     builder: join(root, "healthpilot.py"),
     cli: join(root, "hp"),
     smartConnector: join(root, "smart_connect.py"),
+    runtime: join(root, "clippi-runtime"),
   };
 }
 
