@@ -256,7 +256,7 @@ def ingest_exports(db, root, hp):
     base = root / "raw" / "fhir"
     for config_path in sorted(base.glob("*/healthpilot-source.json")):
         folder = config_path.parent
-        config = json.loads(config_path.read_text())
+        config = json.loads(config_path.read_text(encoding="utf-8-sig"))
         source, org = config["key"], config["org"]
         if not re.fullmatch(r"fhir-[a-z0-9_-]+", source):
             raise ValueError(f"FHIR source key must match fhir-[a-z0-9_-]+: {source}")

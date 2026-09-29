@@ -19,7 +19,7 @@ def initialize_data_root():
         (root / child).mkdir(parents=True, exist_ok=True)
     marker = root / "clippi-health.json"
     if not marker.exists():
-        marker.write_text('{\n  "format": "clippi-health-record-store",\n  "version": 1\n}\n')
+        marker.write_text('{\n  "format": "clippi-health-record-store",\n  "version": 1\n}\n', encoding="utf-8")
 
 
 def main():

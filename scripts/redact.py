@@ -25,7 +25,7 @@ DEFAULT_FILES = ["README_first.md", "case_study_notes.md", "unresolved-questions
 def load_config():
     if not CONFIG.exists():
         sys.exit("redact.json not found — see scripts/redact.py docstring")
-    return json.loads(CONFIG.read_text())
+    return json.loads(CONFIG.read_text(encoding="utf-8"))
 
 
 def build_rules(cfg, strict):
@@ -88,9 +88,9 @@ def main():
         if not src.exists():
             print(f"skip {src.relative_to(ROOT)} (missing)")
             continue
-        text, counts = redact_text(src.read_text(), rules)
+        text, counts = redact_text(src.read_text(encoding="utf-8"), rules)
         dest = out_dir / f"redacted-{src.name}"
-        dest.write_text(text)
+        dest.write_text(text, encoding="utf-8")
         left = residuals(text, cfg)
         total = sum(counts.values())
         print(f"{dest.relative_to(ROOT)}: {total} replacement{'s' if total != 1 else ''}"

@@ -361,7 +361,7 @@ def pdf_text(path):
     digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()[:24]
     cached = cache_dir / f"{digest}.txt"
     if cached.exists():
-        return cached.read_text()
+        return cached.read_text(encoding="utf-8")
     text = ""
     try:
         from pypdf import PdfReader
@@ -380,7 +380,7 @@ def pdf_text(path):
         except (OSError, subprocess.TimeoutExpired):
             text = ""
     if text:
-        cached.write_text(text)
+        cached.write_text(text, encoding="utf-8")
     return text
 
 # ---------------------------------------------------------------------------
@@ -687,12 +687,12 @@ def apple_vitals(zpath):
     st = zpath.stat()
     cache = DATA / f"apple_vitals_{st.st_size}_{int(st.st_mtime)}.json"
     if cache.exists():
-        return json.loads(cache.read_text())
+        return json.loads(cache.read_text(encoding="utf-8"))
     print(f"  parsing {zpath.name} device data (one-time, several minutes)…", flush=True)
     result = parse_apple_vitals(zpath)
     for old in DATA.glob("apple_vitals_*.json"):
         old.unlink()
-    cache.write_text(json.dumps(result))
+    cache.write_text(json.dumps(result), encoding="utf-8")
     return result
 
 # ---------------------------------------------------------------------------
@@ -706,8 +706,8 @@ def ingest_loose_files(db):
             ext = p.suffix.lower()
             if ext not in (".pdf", ".html", ".htm", ".txt", ".md") or any((a / "IHE_XDM").is_dir() for a in p.parents):
                 continue
-            text = pdf_text(p) if ext == ".pdf" else (html_to_text(p.read_text(errors="replace"))
-                                                     if ext in (".html", ".htm") else p.read_text(errors="replace"))
+            text = pdf_text(p) if ext == ".pdf" else (html_to_text(p.read_text(encoding="utf-8", errors="replace"))
+                                                     if ext in (".html", ".htm") else p.read_text(encoding="utf-8", errors="replace"))
             date = parse_when(re.search(r"\d{4}-\d{2}-\d{2}", p.name).group(0))[0] if re.search(r"\d{4}-\d{2}-\d{2}", p.name) else None
             insert(db, "documents", source=folder.name, org=folder.name, kind="document", date=date,
                    title=p.stem, text=text, path=rel(p), format=ext.lstrip("."),
@@ -725,7 +725,7 @@ def ingest_journal(db):
     Each entry becomes a searchable document (kind=journal) and a hand-curated timeline event."""
     if not JOURNAL.exists():
         return 0
-    entries = re.split(r"^## +(?=\d{4}-\d{2}-\d{2})", JOURNAL.read_text(), flags=re.M)[1:]
+    entries = re.split(r"^## +(?=\d{4}-\d{2}-\d{2})", JOURNAL.read_text(encoding="utf-8"), flags=re.M)[1:]
     n = 0
     for raw in entries:
         head, _, body = raw.partition("\n")
@@ -857,7 +857,7 @@ def build_events(db):
     # auto-generated events this row supersedes: "*" = same lane and day, other text = same lane, title contains it.
     if CURATED.exists():
         doc_by_path = {path: did for did, path in db.execute("SELECT id, path FROM documents")}
-        with CURATED.open(newline="") as fh:
+        with CURATED.open(newline="", encoding="utf-8-sig") as fh:
             for row in csv.DictReader(fh):
                 date = parse_when(row.get("date"))[0]
                 if not date or not row.get("title"):
@@ -951,10 +951,10 @@ def build_dashboard(db):
         "topics": dashboard_topics(db),
     }
     payload = json.dumps(data, separators=(",", ":")).replace("</", "<\\/")
-    page = TEMPLATE.read_text()
-    page = page.replace("/*__PLOTLY__*/", PLOTLY.read_text().replace("</script", "<\\/script"))
+    page = TEMPLATE.read_text(encoding="utf-8")
+    page = page.replace("/*__PLOTLY__*/", PLOTLY.read_text(encoding="utf-8").replace("</script", "<\\/script"))
     page = page.replace("/*__DATA__*/null", payload)
-    DASHBOARD.write_text(page)
+    DASHBOARD.write_text(page, encoding="utf-8")
     return len(page)
 
 # ---------------------------------------------------------------------------
@@ -983,7 +983,7 @@ def export_tables(db):
     }
     for name, sql in queries.items():
         cur = db.execute(sql)
-        with (out / f"{name}.csv").open("w", newline="") as fh:
+        with (out / f"{name}.csv").open("w", newline="", encoding="utf-8") as fh:
             w = csv.writer(fh)
             w.writerow([c[0] for c in cur.description])
             w.writerows(cur)
@@ -1002,7 +1002,7 @@ def write_records(db):
         slug = re.sub(r"[^A-Za-z0-9]+", "-", r["title"] or "untitled").strip("-")[:60]
         p = out / f"{r['date'] or 'undated'}_{r['kind']}_{r['id']:04d}_{slug}.md"
         front = "\n".join(f"{k}: {json.dumps(r[k])}" for k in keys)
-        p.write_text(f"---\n{front}\n---\n\n{r['text'] or ''}\n")
+        p.write_text(f"---\n{front}\n---\n\n{r['text'] or ''}\n", encoding="utf-8")
         n += 1
     return n
 

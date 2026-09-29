@@ -162,7 +162,7 @@ def ingest_exports(db, root, hp):
     totals = {}
     for config_path in sorted((root / 'email').glob('*/healthpilot-source.json')):
         export = config_path.parent
-        config = json.loads(config_path.read_text())
+        config = json.loads(config_path.read_text(encoding="utf-8-sig"))
         source, org = config['key'], config['org']
         if not source.startswith('email-'):
             raise ValueError('Email source keys must start with email-')
@@ -181,7 +181,7 @@ def ingest_exports(db, root, hp):
             folder = within(export, entry['folder'])
             original = within(folder, 'original.eml')
             markdown = within(folder, 'message.md')
-            raw = markdown.read_text()
+            raw = markdown.read_text(encoding="utf-8", errors="replace")
             if '\n---\n' not in raw:
                 raise ValueError(f'Missing message/body separator: {markdown}')
             body = raw.split('\n---\n', 1)[1].strip()
@@ -222,7 +222,7 @@ def ingest_exports(db, root, hp):
                 path = within(folder, path.name)
                 sidecar = next((p for p in (path.with_suffix('.ocr.md'), path.with_suffix('.extracted.txt')) if p.exists()), None)
                 # Preserve originals even when there is no supplied transcription.
-                text = sidecar.read_text() if sidecar else '[No text sidecar supplied; open the original attachment.]'
+                text = sidecar.read_text(encoding="utf-8", errors="replace") if sidecar else '[No text sidecar supplied; open the original attachment.]'
                 method = 'supplied OCR transcription (uncertain readings retained)' if sidecar and sidecar.name.endswith('.ocr.md') else 'supplied text extraction' if sidecar else 'metadata only'
                 aid = hp.insert(db, 'documents', source=source, org=org, kind='attachment',
                     date=entry['date'][:10], title=path.name, author='See attachment', parent_id=doc_id,
@@ -241,7 +241,7 @@ def ingest_exports(db, root, hp):
                 hp.insert(db, 'documents', source=source, org=org, kind='document',
                     title=f'{org} — {name}', author='Export/transcription index',
                     text='Export aid, not a clinician-authored assessment. Appointment notifications '
-                         'do not establish that a visit occurred.\n\n' + path.read_text(),
+                         'do not establish that a visit occurred.\n\n' + path.read_text(encoding="utf-8", errors="replace"),
                     path=hp.rel(path), format='md', source_id=f'{source}:{name}',
                     provenance='Supplied local export index, chronology or OCR review notes; dates appear in text.')
                 counts['reference_documents'] += 1

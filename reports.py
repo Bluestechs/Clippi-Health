@@ -110,7 +110,7 @@ def cite(d):
 def load_topics():
     if not TOPICS_PATH.exists():
         return {}
-    return {k: v for k, v in json.loads(TOPICS_PATH.read_text()).items() if not k.startswith("_")}
+    return {k: v for k, v in json.loads(TOPICS_PATH.read_text(encoding="utf-8")).items() if not k.startswith("_")}
 
 
 def rx(patterns):
@@ -572,7 +572,7 @@ Other files: drop PDFs/HTML/text or an IHE XDM C-CDA record-download folder into
 Hand-curated inputs: `curated_events.csv` (timeline), `topics.json` (topics), `case_study_notes.md` (patient's notes).
 """)
     out = DATA / "DATA_DICTIONARY.md"
-    out.write_text("\n".join(L))
+    out.write_text("\n".join(L), encoding="utf-8")
     return out
 
 # ---------------------------------------------------------------------------
@@ -809,9 +809,9 @@ def build_case_study(db):
     L.append("")
     if NOTES_PATH.exists():
         L.append("---\n")
-        L.append(NOTES_PATH.read_text().strip() + "\n")
+        L.append(NOTES_PATH.read_text(encoding="utf-8").strip() + "\n")
     out = DATA / "CASE_STUDY.md"
-    out.write_text("\n".join(L))
+    out.write_text("\n".join(L), encoding="utf-8")
     return out
 
 

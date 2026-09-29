@@ -40,7 +40,7 @@ def main() -> int:
             continue
         path = ROOT / name
         try:
-            text = path.read_text()
+            text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
         for number, line in enumerate(text.splitlines(), 1):

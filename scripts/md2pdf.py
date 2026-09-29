@@ -200,9 +200,9 @@ def main():
     if len(args) < 2:
         sys.exit(__doc__)
     src, dest = Path(args[0]), Path(args[1])
-    page = md_to_html(src.read_text(), title or src.stem)
+    page = md_to_html(src.read_text(encoding="utf-8"), title or src.stem)
     html_path = dest.with_suffix(".html")
-    html_path.write_text(page)
+    html_path.write_text(page, encoding="utf-8")
     if "--html-only" in sys.argv:
         print(html_path)
         return

@@ -133,7 +133,7 @@ def load_profiles():
     for path in profile_paths():
         if path.name.endswith(".example.json"):
             continue
-        value = json.loads(path.read_text())
+        value = json.loads(path.read_text(encoding="utf-8-sig"))
         values = value if isinstance(value, list) else [value]
         profiles.extend(validate_profile(item, require_client_id=False) for item in values)
     keys = [profile["key"] for profile in profiles]
@@ -141,7 +141,7 @@ def load_profiles():
         raise ValueError("connector profile keys must be unique")
     overrides = {}
     for path in sorted(LOCAL_CONNECTORS.glob("*.json")) if LOCAL_CONNECTORS.exists() else []:
-        value = json.loads(path.read_text())
+        value = json.loads(path.read_text(encoding="utf-8-sig"))
         if set(value) - {"key", "client_id"}:
             raise ValueError(f"local connector override has unsupported fields: {path}")
         key = validate_source(value.get("key", ""))
@@ -378,7 +378,7 @@ def store_resources(profile, resources):
         "method": "Direct public-client SMART OAuth with PKCE; records transferred from the health system to this device.",
         "exported_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
-    (folder / "healthpilot-source.json").write_text(json.dumps(config, indent=2, sort_keys=True) + "\n")
+    (folder / "healthpilot-source.json").write_text(json.dumps(config, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return destination
 
 
@@ -395,7 +395,7 @@ def import_file(path, source, org):
     config = {"key": source, "org": org, "system": "FHIR file import",
               "method": "FHIR NDJSON file supplied directly by the user.",
               "exported_at": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat(timespec="seconds")}
-    (folder / "healthpilot-source.json").write_text(json.dumps(config, indent=2, sort_keys=True) + "\n")
+    (folder / "healthpilot-source.json").write_text(json.dumps(config, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return destination
 
 

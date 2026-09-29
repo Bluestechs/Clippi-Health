@@ -34,7 +34,7 @@ def clinical_summary():
     src = ROOT / "clinical_summary_draft.md"
     if not src.exists():
         return None
-    md = src.read_text()
+    md = src.read_text(encoding="utf-8")
     md = md.split("\n---\n", 1)[1] if "\n---\n" in md else md          # drop the working intro
     md = md.split("\n---\n\n## Answers to the blanks list", 1)[0]       # drop the fill-in checklist
     md = md.replace("⚠ *(", "*(Record note: ").replace("⚠ *", "*Record note: ")
@@ -50,7 +50,7 @@ def clinical_summary():
 
 def case_study():
     src = ROOT / "data" / "CASE_STUDY.md"
-    md = src.read_text()
+    md = src.read_text(encoding="utf-8")
     md = re.sub(r"^## Where the .*? draft clinical summary and the records differ\n.*?(?=^## )", "", md, flags=re.S | re.M)
     md = re.sub(r"^Hand-edited\. Included verbatim.*?\n\n", "", md, flags=re.S | re.M)
     md = md.replace("Topics, their order and the patient's framing come from `topics.json`; the closing section is `case_study_notes.md` verbatim.",
@@ -68,10 +68,10 @@ def main():
         if not md:
             continue
         src = OUT / f"{name}_{stamp}.md"
-        src.write_text(md)
+        src.write_text(md, encoding="utf-8")
         pdf = OUT / f"{name}_{stamp}.pdf"
         html_path = pdf.with_suffix(".html")
-        html_path.write_text(md2pdf.md_to_html(md, name.replace("_", " ")))
+        html_path.write_text(md2pdf.md_to_html(md, name.replace("_", " ")), encoding="utf-8")
         md2pdf.render_pdf(html_path, pdf)
         html_path.unlink()
         src.unlink()
