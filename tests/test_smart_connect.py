@@ -44,6 +44,34 @@ class SmartConnectorTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             smart_connect.validate_profile(value)
 
+    def test_manual_profile_needs_no_oauth_fields(self):
+        value = smart_connect.validate_profile({
+            "key": "fhir-example-lab",
+            "name": "Example Lab",
+            "org": "Example Lab",
+            "portal_url": "https://patient.example.test/results",
+            "manual_export_steps": ["Download a result PDF."],
+        }, require_client_id=False)
+        self.assertFalse(value["direct_capable"])
+        self.assertFalse(value["ready"])
+        self.assertEqual(value["manual_import_mode"], "files")
+
+    def test_manual_profile_rejects_local_client_id_configuration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            catalog = root / "connectors"
+            local = root / "raw" / "connectors"
+            catalog.mkdir(parents=True)
+            catalog.joinpath("lab.json").write_text(json.dumps({
+                "key": "fhir-example-lab",
+                "name": "Example Lab",
+                "org": "Example Lab",
+                "manual_export_steps": ["Download a result PDF."],
+            }))
+            with patch.multiple(smart_connect, CONNECTORS=catalog, LOCAL_CONNECTORS=local):
+                with self.assertRaisesRegex(ValueError, "does not publish"):
+                    smart_connect.configure_profile("fhir-example-lab", "unverified-client-id")
+
     def test_authorization_uses_pkce_and_state(self):
         value = profile()
         url = smart_connect.authorization_url(value, {"authorization_endpoint": "https://records.example.test/auth"},

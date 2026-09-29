@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/clippi-health-logo.png" alt="Clippi-Health paperclip and heart logo" width="160"></p>
+
 # Clippi-Health
 
 Clippi-Health turns personal health exports into a local SQLite database, searchable records, a single-file dashboard, and cited reference documents. It accepts standards-based FHIR and C-CDA records, Apple Health exports, local correspondence exports, and ordinary documents.
@@ -58,6 +60,8 @@ Clippi-Health has no hosted service. Its connector helper runs only on the user'
 The signed local catalog includes a BJC HealthCare & Washington University MyChart endpoint profile. Direct connection becomes available after Clippi-Health receives an Epic production public client id; app-owner setup lives in the desktop **Sources** tab and a local override stays under ignored `raw/connectors/`. Providers that require a server-held client secret are intentionally unsupported.
 
 The BJC profile also works immediately without app registration: **Sources** shows BJC's current **Your Menu → Document Center** instructions, opens BJC MyChart, and accepts the downloaded ZIP or record folder. MyChart IHE XDM ZIPs are parsed directly during the local rebuild, so they do not need to be unpacked first.
+
+Quest Diagnostics and Labcorp cards provide verified Apple Health Records and portal-PDF import instructions. Direct OAuth remains disabled until each laboratory supplies a documented third-party public-client registration and endpoint profile. See [`docs/LAB_EXPORTS.md`](docs/LAB_EXPORTS.md).
 
 Developer commands:
 

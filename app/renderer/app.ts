@@ -13,14 +13,23 @@ type Connector = {
   key: string;
   name: string;
   org: string;
-  fhir_base: string;
+  fhir_base?: string;
   ready: boolean;
+  direct_capable: boolean;
+  direct_note?: string;
   registration_url?: string;
   registration_note?: string;
   registration_steps?: string[];
+  registration_label?: string;
+  registration_guide?: "epic";
   portal_url?: string;
+  portal_label?: string;
   manual_help_url?: string;
+  manual_help_label?: string;
   manual_export_steps?: string[];
+  manual_title?: string;
+  manual_import_mode?: "files" | "portal";
+  import_label?: string;
 };
 type EventRow = Record<string, string>;
 type Summary = {
@@ -246,7 +255,7 @@ async function renderConnectors(): Promise<void> {
       const manual = document.createElement("div");
       manual.className = "connector-manual";
       const title = document.createElement("strong");
-      title.textContent = "Import a one-time MyChart download";
+      title.textContent = connector.manual_title ?? "Import a one-time download";
       const steps = document.createElement("ol");
       for (const value of connector.manual_export_steps) {
         const step = document.createElement("li");
@@ -258,7 +267,7 @@ async function renderConnectors(): Promise<void> {
       if (connector.portal_url) {
         const portal = document.createElement("button");
         portal.className = "ghost";
-        portal.textContent = "Open BJC MyChart";
+        portal.textContent = connector.portal_label ?? `Open ${connector.name}`;
         portal.onclick = async () => {
           const error = await window.hp.openConnectorLink(connector.key, "portal");
           if (error) appendLog(error);
@@ -268,7 +277,7 @@ async function renderConnectors(): Promise<void> {
       if (connector.manual_help_url) {
         const help = document.createElement("button");
         help.className = "ghost";
-        help.textContent = "View BJC instructions";
+        help.textContent = connector.manual_help_label ?? "View export instructions";
         help.onclick = async () => {
           const error = await window.hp.openConnectorLink(connector.key, "help");
           if (error) appendLog(error);
@@ -276,11 +285,13 @@ async function renderConnectors(): Promise<void> {
         actions.append(help);
       }
       const choose = document.createElement("button");
-      choose.textContent = "Choose downloaded ZIP or folder…";
+      choose.textContent = connector.import_label ?? "Choose downloaded files…";
       const planTarget = document.createElement("div");
       choose.onclick = async () => {
-        const plan = await window.hp.planPortalImport();
-        renderImportPlan(planTarget, plan, "Import MyChart record");
+        const plan = connector.manual_import_mode === "portal"
+          ? await window.hp.planPortalImport()
+          : await window.hp.planImport();
+        renderImportPlan(planTarget, plan, `Import ${connector.name} records`);
       };
       actions.append(choose);
       manual.append(title, steps, actions, planTarget);
@@ -291,11 +302,13 @@ async function renderConnectors(): Promise<void> {
     direct.className = "connector-direct";
     const directText = document.createElement("div");
     const directTitle = document.createElement("strong");
-    directTitle.textContent = "Direct connection";
+    directTitle.textContent = "Direct OAuth connection";
     const directNote = document.createElement("span");
     directNote.textContent = connector.ready
-      ? "Sign in on BJC's page. Clippi-Health downloads FHIR to this computer and discards the token when it finishes."
-      : "Waiting for Clippi-Health's Epic production app registration. The manual MyChart download above works without an app registration.";
+      ? `Sign in on ${connector.name}'s page. Clippi-Health downloads FHIR to this computer and discards the token when it finishes.`
+      : connector.direct_note ?? (connector.direct_capable
+        ? "Waiting for a provider-issued public client ID. The manual download above works now."
+        : "This provider has not published the app-registration details needed for a safe local OAuth connection.");
     directText.append(directTitle, directNote);
     direct.append(directText);
     if (connector.ready) {
@@ -315,9 +328,13 @@ async function renderConnectors(): Promise<void> {
     }
     card.append(direct);
 
+    if (!connector.direct_capable && !connector.registration_note && !connector.registration_url) return card;
+
     const setup = document.createElement("details");
     const setupTitle = document.createElement("summary");
-    setupTitle.textContent = connector.ready ? "Direct connection settings" : "App-owner setup for direct connection";
+    setupTitle.textContent = connector.direct_capable
+      ? (connector.ready ? "Direct connection settings" : "App-owner setup for direct connection")
+      : "Direct OAuth status";
     const setupNote = document.createElement("p");
     setupNote.className = "sub";
     setupNote.textContent = connector.registration_note ?? "Enter the provider-issued public client ID.";
@@ -330,7 +347,10 @@ async function renderConnectors(): Promise<void> {
     }
     const setupActions = document.createElement("div");
     setupActions.className = "connector-setup";
-    if (connector.ready) {
+    if (!connector.direct_capable) {
+      // Manual-only profiles can link to a provider's API request path, but cannot accept a
+      // client ID until an endpoint and loopback OAuth contract have been verified.
+    } else if (connector.ready) {
       const clear = document.createElement("button");
       clear.className = "ghost";
       clear.textContent = "Remove local client ID";
@@ -342,9 +362,9 @@ async function renderConnectors(): Promise<void> {
       setupActions.append(clear);
     } else {
       const input = document.createElement("input");
-      input.placeholder = "Epic production public client ID";
+      input.placeholder = "Provider-issued public client ID";
       input.autocomplete = "off";
-      input.setAttribute("aria-label", "Epic production public client ID");
+      input.setAttribute("aria-label", "Provider-issued public client ID");
       const save = document.createElement("button");
       save.textContent = "Save client ID";
       const error = document.createElement("span");
@@ -362,24 +382,26 @@ async function renderConnectors(): Promise<void> {
     if (connector.registration_url) {
       const registration = document.createElement("button");
       registration.className = "ghost";
-      registration.textContent = "Open Epic app registration";
+      registration.textContent = connector.registration_label ?? "Open provider app registration";
       registration.onclick = async () => {
         const error = await window.hp.openConnectorLink(connector.key, "registration");
         if (error) appendLog(error);
       };
       setupActions.append(registration);
     }
-    const guide = document.createElement("button");
-    guide.className = "ghost";
-    guide.textContent = "Open full registration checklist";
-    guide.onclick = async () => {
-      const error = await window.hp.openRegistrationGuide();
-      if (error) appendLog(error);
-    };
-    setupActions.append(guide);
+    if (connector.registration_guide === "epic") {
+      const guide = document.createElement("button");
+      guide.className = "ghost";
+      guide.textContent = "Open full registration checklist";
+      guide.onclick = async () => {
+        const error = await window.hp.openRegistrationGuide();
+        if (error) appendLog(error);
+      };
+      setupActions.append(guide);
+    }
     setup.append(setupTitle, setupNote);
     if (registrationSteps.childElementCount) setup.append(registrationSteps);
-    setup.append(setupActions);
+    if (setupActions.childElementCount) setup.append(setupActions);
     card.append(setup);
     return card;
   }));

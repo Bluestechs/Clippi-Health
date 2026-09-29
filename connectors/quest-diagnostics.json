@@ -1,0 +1,21 @@
+{
+  "key": "fhir-quest-diagnostics",
+  "name": "Quest Diagnostics",
+  "org": "Quest Diagnostics",
+  "portal_url": "https://myquest.questdiagnostics.com/results",
+  "portal_label": "Open MyQuest",
+  "manual_help_url": "https://myquest.questdiagnostics.com/myquest-faq1/MyQuest/3056.htm?Highlight=fax",
+  "manual_help_label": "View Quest download help",
+  "manual_title": "Import Quest laboratory results",
+  "manual_import_mode": "files",
+  "import_label": "Choose Apple Health ZIP or Quest PDFs…",
+  "manual_export_steps": [
+    "Preferred for structured history: on iPhone, open Health, tap your profile picture, choose Health Records, add Quest Diagnostics, and sign in with MyQuest. After the records finish downloading, use Health → profile → Export All Health Data and import that ZIP here.",
+    "For individual reports: sign in to MyQuest, open Test Results, use the action next to a result, and choose Download PDF. Repeat for the reports you want, then select those PDFs here.",
+    "If older Quest results are missing, use Find my historical Quest results in MyQuest before exporting. Quest says electronic history may extend back to January 1, 2010."
+  ],
+  "registration_url": "https://privacyportal.onetrust.com/webform/168bf6fc-ead2-4217-a0df-7c602a1d8095/0f21ef1a-79a8-4bc0-80b1-89a1c16bf1af",
+  "registration_label": "Request Quest FHIR API access",
+  "registration_note": "Quest supports Apple Health Records and publishes a FHIR API request form, but it does not publish the endpoint and public-client registration details Clippi-Health needs for a verified local OAuth profile. Direct connection remains disabled until Quest supplies and permits those details.",
+  "direct_note": "Quest has a patient-facing FHIR path through Apple Health, but Clippi-Health still needs Quest's endpoint and third-party public-client registration. Use Apple Health or PDF import now."
+}

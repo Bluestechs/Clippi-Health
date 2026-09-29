@@ -39,6 +39,13 @@ export async function runSmoke(window: BrowserWindow, outDir: string): Promise<v
     document.querySelector(".connector").scrollIntoView({ block: "start" });
   })()`);
   await delay(500);
+  const connectorNames = await window.webContents.executeJavaScript(`(() =>
+    [...document.querySelectorAll(".connector-heading strong")].map((node) => node.textContent)
+  )()`);
+  for (const expected of ["BJC HealthCare MyChart", "Labcorp", "Quest Diagnostics"]) {
+    if (!connectorNames.includes(expected)) throw new Error(`connector card did not render: ${expected}`);
+  }
+  process.stdout.write(`connector cards ${JSON.stringify(connectorNames)}\n`);
   const connector = await window.webContents.capturePage();
   const connectorFile = join(outDir, "connector-light.png");
   writeFileSync(connectorFile, connector.toPNG());

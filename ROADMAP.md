@@ -6,6 +6,7 @@ Clippi-Health is local-first. It will not operate or depend on a hosted Clippi-H
 
 - Polish the **Connect a health system** desktop flow with cancellation, richer progress, and provider-specific recovery guidance. The app owns the helper lifecycle; users never manage a daemon or terminal process.
 - Complete Epic production public-client registration for the bundled BJC HealthCare & Washington University endpoint profile, verify the end-to-end production flow, and ship the issued public client id in signed releases.
+- Submit Quest's official FHIR API request and contact Labcorp interoperability support for patient-facing FHIR endpoint and public-client onboarding details. Enable direct OAuth only after each provider supports PKCE, a loopback redirect, distributable client registration, and synthetic end-to-end testing. The app already includes verified Apple Health and PDF import instructions for both laboratories.
 - Add reviewed endpoint profiles and provider-specific manual download instructions to the signed local catalog.
 - Keep OAuth tokens in memory for one import and require a fresh login for later pulls.
 - Treat providers that require a confidential server-held secret as unsupported; guide those users to manual FHIR/C-CDA export.
@@ -17,6 +18,7 @@ Clippi-Health is local-first. It will not operate or depend on a hosted Clippi-H
 - Replace macOS-only PDFKit extraction with a bundled, portable extractor and keep OCR optional.
 - Normalize browser launching, loopback OAuth callbacks, paths, permissions, encodings, long paths, and process lifecycle across all three operating systems.
 - Remove assumptions about Homebrew, Xcode tools, Apple Health, and macOS LaunchAgents from the core workflow.
+- Give future iOS and Android clients the same Clippi logo and System/Paper/Dark theme choices as the desktop app.
 
 ## Installation for non-technical users
 

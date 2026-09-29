@@ -20,14 +20,23 @@ type Connector = {
   key: string;
   name: string;
   org: string;
-  fhir_base: string;
+  fhir_base?: string;
   ready: boolean;
+  direct_capable: boolean;
+  direct_note?: string;
   registration_url?: string;
   registration_note?: string;
   registration_steps?: string[];
+  registration_label?: string;
+  registration_guide?: "epic";
   portal_url?: string;
+  portal_label?: string;
   manual_help_url?: string;
+  manual_help_label?: string;
   manual_export_steps?: string[];
+  manual_title?: string;
+  manual_import_mode?: "files" | "portal";
+  import_label?: string;
 };
 
 async function appState(): Promise<AppState> {

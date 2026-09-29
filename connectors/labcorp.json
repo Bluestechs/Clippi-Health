@@ -1,0 +1,19 @@
+{
+  "key": "fhir-labcorp",
+  "name": "Labcorp",
+  "org": "Labcorp",
+  "portal_url": "https://patient.labcorp.com",
+  "portal_label": "Open Labcorp Patient",
+  "manual_help_url": "https://www.labcorp.com/patients/tests/results",
+  "manual_help_label": "View Labcorp result help",
+  "manual_title": "Import Labcorp laboratory results",
+  "manual_import_mode": "files",
+  "import_label": "Choose Apple Health ZIP or Labcorp PDFs…",
+  "manual_export_steps": [
+    "Preferred for structured history: on iPhone, open Health, tap your profile picture, choose Health Records, add Labcorp, and sign in with your Labcorp Patient account. After the records finish downloading, use Health → profile → Export All Health Data and import that ZIP here.",
+    "For report files: sign in to Labcorp Patient or MyLabcorp, open Results, view a result, and download the official report. Repeat for the reports you want, then select those PDFs here.",
+    "Labcorp says its current MyLabcorp app can show historical results going back about 15 years; confirm the desired history is visible before downloading or exporting."
+  ],
+  "registration_note": "Labcorp supports Health Records on iPhone, which uses patient-facing FHIR APIs, but Labcorp does not publish third-party public-client registration and endpoint documentation for a local app. Direct connection remains disabled until Labcorp provides and permits those details.",
+  "direct_note": "Labcorp has a patient-facing FHIR path through Apple Health, but Clippi-Health still needs Labcorp's endpoint and third-party public-client registration. Use Apple Health or PDF import now."
+}

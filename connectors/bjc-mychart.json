@@ -6,6 +6,8 @@
   "client_id": "",
   "redirect_uri": "http://127.0.0.1:8765/oauth/callback",
   "registration_url": "https://fhir.epic.com/Developer/Apps",
+  "registration_label": "Open Epic app registration",
+  "registration_guide": "epic",
   "registration_note": "Epic registration is free and self-service, but the app owner must supply business identity and data-use information, accept Epic's terms, and obtain Clippi-Health's own production public client ID.",
   "registration_steps": [
     "Create an Epic on FHIR developer account and register Clippi-Health for Patients, Incoming API, standalone OAuth, and FHIR R4.",
@@ -14,7 +16,13 @@
     "Paste the production public client ID below and test against BJC MyChart. If BJC does not receive it automatically, ask BJC to activate that client ID."
   ],
   "portal_url": "https://www.mypatientchart.org/mychart/Authentication/Login",
+  "portal_label": "Open BJC MyChart",
   "manual_help_url": "https://www.bjc.org/about/bjc-medical-group/medical-records-request",
+  "manual_help_label": "View BJC instructions",
+  "manual_title": "Import a one-time MyChart download",
+  "manual_import_mode": "portal",
+  "import_label": "Choose downloaded ZIP or folder…",
+  "direct_note": "Waiting for Clippi-Health's Epic production app registration. The manual MyChart download above works without an app registration.",
   "manual_export_steps": [
     "Sign in to BJC HealthCare & Washington University MyChart.",
     "Open Your Menu, then choose Document Center.",

@@ -64,27 +64,38 @@ def validate_source(value):
 
 
 def validate_profile(profile, require_client_id=True):
-    required = {"key", "name", "org", "fhir_base", "redirect_uri"}
+    required = {"key", "name", "org"}
     missing = sorted(required - profile.keys())
     if missing:
         raise ValueError("connector profile is missing: " + ", ".join(missing))
     profile = dict(profile)
     profile["key"] = validate_source(profile["key"])
-    profile["fhir_base"] = validate_remote_url(profile["fhir_base"], "FHIR base", True)
-    redirect = urllib.parse.urlparse(profile["redirect_uri"])
-    if redirect.scheme != "http" or redirect.hostname != "127.0.0.1" or redirect.path != "/oauth/callback":
-        raise ValueError("redirect_uri must be http://127.0.0.1:<port>/oauth/callback")
-    if not redirect.port or redirect.port < 1024:
-        raise ValueError("redirect_uri must use a fixed unprivileged loopback port")
     if profile.get("client_secret"):
         raise ValueError("local connectors must be public clients; client_secret is forbidden")
+    direct_capable = any(profile.get(field) for field in ("fhir_base", "redirect_uri", "client_id"))
+    if direct_capable:
+        direct_missing = [field for field in ("fhir_base", "redirect_uri") if not profile.get(field)]
+        if direct_missing:
+            raise ValueError("direct connector profile is missing: " + ", ".join(direct_missing))
+        profile["fhir_base"] = validate_remote_url(profile["fhir_base"], "FHIR base", True)
+        redirect = urllib.parse.urlparse(profile["redirect_uri"])
+        if redirect.scheme != "http" or redirect.hostname != "127.0.0.1" or redirect.path != "/oauth/callback":
+            raise ValueError("redirect_uri must be http://127.0.0.1:<port>/oauth/callback")
+        if not redirect.port or redirect.port < 1024:
+            raise ValueError("redirect_uri must use a fixed unprivileged loopback port")
+    else:
+        profile["fhir_base"] = ""
+        profile["redirect_uri"] = ""
     client_id = str(profile.get("client_id") or "").strip()
+    if require_client_id and not direct_capable:
+        raise ValueError("connector profile does not offer direct OAuth")
     if require_client_id and not client_id:
         raise ValueError("connector profile requires a public client_id")
     if client_id and (len(client_id) > 256 or not re.fullmatch(r"[A-Za-z0-9._~:/+-]+", client_id)):
         raise ValueError("client_id contains unsupported characters")
     profile["client_id"] = client_id
-    profile["ready"] = bool(client_id)
+    profile["direct_capable"] = direct_capable
+    profile["ready"] = direct_capable and bool(client_id)
     if profile.get("registration_url"):
         profile["registration_url"] = validate_remote_url(profile["registration_url"], "registration URL")
     if profile.get("portal_url"):
@@ -96,6 +107,10 @@ def validate_profile(profile, require_client_id=True):
         if not isinstance(steps, list) or not all(isinstance(step, str) and step.strip() for step in steps):
             raise ValueError(f"{field} must contain non-empty strings")
         profile[field] = steps
+    manual_import_mode = profile.get("manual_import_mode") or "files"
+    if manual_import_mode not in {"files", "portal"}:
+        raise ValueError("manual_import_mode must be files or portal")
+    profile["manual_import_mode"] = manual_import_mode
     scopes = profile.get("scopes") or ["openid", "fhirUser", "launch/patient", "patient/*.rs"]
     profile["scopes"] = scopes if isinstance(scopes, list) else str(scopes).split()
     profile["resource_types"] = profile.get("resource_types") or DEFAULT_TYPES
@@ -148,6 +163,8 @@ def configure_profile(key, client_id):
     profile = next((item for item in load_profiles() if item["key"] == key), None)
     if not profile:
         raise ValueError(f"unknown connector {key!r}")
+    if not profile["direct_capable"]:
+        raise ValueError(f"{profile['name']} does not publish a configurable direct OAuth profile")
     candidate = validate_profile(dict(profile, client_id=client_id), require_client_id=True)
     LOCAL_CONNECTORS.mkdir(parents=True, exist_ok=True)
     destination = LOCAL_CONNECTORS / f"{key}.json"
@@ -395,8 +412,11 @@ def connect(profile, open_browser=True):
 
 
 def cmd_list(args):
-    public_fields = ("key", "name", "org", "fhir_base", "ready", "registration_url", "registration_note",
-                     "registration_steps", "portal_url", "manual_help_url", "manual_export_steps")
+    public_fields = ("key", "name", "org", "fhir_base", "ready", "direct_capable", "direct_note",
+                     "registration_url", "registration_note", "registration_steps", "registration_label",
+                     "registration_guide", "portal_url", "portal_label", "manual_help_url",
+                     "manual_help_label", "manual_export_steps", "manual_title", "manual_import_mode",
+                     "import_label")
     profiles = [{k: p[k] for k in public_fields if k in p} for p in load_profiles()]
     print(json.dumps(profiles, indent=2) if args.json else "\n".join(f"{p['key']}\t{p['name']}" for p in profiles))
 

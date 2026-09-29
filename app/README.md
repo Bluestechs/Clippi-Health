@@ -28,7 +28,7 @@ The palette button in the upper-right corner offers **System**, **Light · Paper
 ## Tabs
 
 - **Dashboard:** reads the generated local dashboard through the restricted `hp://root/` protocol.
-- **Sources:** lists the sources in the current build, guides a one-time BJC MyChart download, imports its ZIP directly, imports user-selected local email/document ZIPs without mailbox access, starts a direct SMART connector when a registered provider profile is available, or copies Apple Health, FHIR/C-CDA, and ordinary files into `raw/` after showing a plan. The dashboard's **Manage sources** button opens this tab when it is viewed inside the desktop app.
+- **Sources:** lists the sources in the current build, guides BJC MyChart, Quest Diagnostics, and Labcorp imports, imports user-selected local email/document ZIPs without mailbox access, starts a direct SMART connector when a registered provider profile is available, or copies Apple Health, FHIR/C-CDA, PDFs, and ordinary files into `raw/` after showing a plan. Quest and Labcorp currently use Apple Health or official-report downloads while direct third-party OAuth registration is investigated. The dashboard's **Manage sources** button opens this tab when it is viewed inside the desktop app.
 - **Build:** runs `python3 healthpilot.py` and streams progress.
 - **Timeline events:** edits `curated_events.csv`.
 - **Notes:** edits `case_study_notes.md`.
