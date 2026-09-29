@@ -14,7 +14,6 @@ Clippi-Health is local-first. It will not operate or depend on a hosted Clippi-H
 
 ## Cross-platform desktop
 
-- Validate the native installer jobs on current macOS, Windows, and Linux GitHub runners and resolve any target-specific failures found there.
 - Normalize browser launching, loopback OAuth callbacks, paths, permissions, encodings, long paths, and process lifecycle across all three operating systems.
 - Remove assumptions about Homebrew, Xcode tools, Apple Health, and macOS LaunchAgents from the core workflow.
 - Give future iOS and Android clients the same Clippi logo and System/Paper/Dark theme choices as the desktop app.

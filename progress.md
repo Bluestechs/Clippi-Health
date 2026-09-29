@@ -17,7 +17,7 @@ Updated 2026-09-29.
 - The desktop app now packages a self-contained local record engine with pypdf, its connector catalog, templates, and browser assets. Installed users do not need Python, Node, Git, or terminal commands.
 - Branded macOS ICNS, Windows ICO, and Linux PNG assets are generated from the selected logo. Electron packages use the Clippi-Health bundle id and medical-app category.
 - Electron Forge makes DMG/ZIP, Windows Squirrel, and DEB/ZIP artifacts. Every build verifies the bundled runtime against a temporary clean record store before packaging.
-- GitHub CI covers the Python tests, Electron tests and type checking, the public-source audit, package-manifest inspection, and the shipped dependency audit. A separate four-runner workflow builds evaluation installers.
+- GitHub CI covers the Python tests, Electron tests and type checking, the public-source audit, package-manifest inspection, and the shipped dependency audit. The four-runner evaluation workflow now builds and verifies installers successfully on macOS Apple Silicon, macOS Intel, Windows x64, and Linux x64.
 - A fail-closed production workflow is ready for Developer ID/notarization and Microsoft Artifact Signing. A version tag creates a draft release only after signed platform artifacts validate.
 
 ## Release work remaining
@@ -26,11 +26,11 @@ Updated 2026-09-29.
 - Submit Quest's FHIR API request and contact Labcorp about third-party patient-facing FHIR registration, then validate any offered local public-client flow before enabling it.
 - Create and export an Apple Developer ID Application certificate, add the notarization credentials to GitHub, and validate the signed release on both Mac architectures.
 - Complete Microsoft Artifact Signing identity validation and GitHub OIDC setup, then validate the Windows release job.
-- Run the new native jobs and clean-machine install/uninstall tests on Windows and Linux; address any platform-specific findings before publishing the first binary release.
+- Install the verified evaluation artifacts on clean Windows and Linux machines and exercise launch, import, rebuild, and uninstall before publishing the first binary release.
 - Add practical Android and Health Connect export support.
 - Build the optional, explicitly enabled local read-only MCP server and companion query skill.
 - Add contributor and security documentation plus synthetic fixtures for community development.
 
 ## Verification
 
-The current source catalog passes 24 Python unit tests, Electron type checking, 47 Electron component tests, the distribution PII audit, and the production-dependency audit. The bundled native engine passed build/query/connector checks from a clean data directory. A locally built macOS Apple Silicon app passed strict bundle-signature verification and full UI screenshot smoke coverage across every tab and both explicit themes; its DMG and ZIP were built successfully. That local artifact is ad-hoc signed and remains an evaluation build until Developer ID notarization is configured.
+The current source catalog passes 24 Python unit tests, Electron type checking, 47 Electron component tests, the distribution PII audit, and the production-dependency audit. The bundled native engine passed build/query/connector checks from a clean data directory. GitHub Actions run 36618736252 built and verified DMG/ZIP artifacts for both Mac architectures, a Windows Squirrel installer, and Linux DEB/ZIP artifacts from commit `ed4c846`. A locally built macOS Apple Silicon app also passed strict bundle-signature verification and full UI screenshot smoke coverage across every tab and both explicit themes. Evaluation macOS artifacts are ad-hoc signed and Windows artifacts are unsigned until production credentials are configured.
