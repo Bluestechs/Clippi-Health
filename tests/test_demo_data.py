@@ -50,6 +50,8 @@ class DemoDataTests(unittest.TestCase):
                 self.assertTrue(all(low < value < high and n == 288 for value, low, high, n in glucose))
                 self.assertGreater(len({r[0] for r in glucose}), 300)
                 self.assertEqual(db.execute("SELECT count(*) FROM vitals_daily WHERE metric='Glucose time in range 70–180'").fetchone()[0], 365)
+                for metric in ("Insulin basal", "Insulin bolus"):
+                    self.assertEqual(db.execute("SELECT count(*) FROM vitals_daily WHERE metric=?", [metric]).fetchone()[0], 365)
                 self.assertGreater(db.execute("SELECT count(*) FROM documents_fts WHERE documents_fts MATCH 'diabetes'").fetchone()[0], 5)
             page = (root / "dashboard.html").read_text(encoding="utf-8")
             self.assertIn('"demo":true', page)

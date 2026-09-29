@@ -23,6 +23,8 @@ All medical data is ignored by Git. Source data stays under `raw/` or `email/`; 
 
 For a walkthrough or video, select **Try demo** in the desktop app. Sally Seastar's entirely fictional diabetes record fills the charts and record views in a separate local store. **Exit demo** returns to your records. See the [demo walkthrough](docs/DEMO.md).
 
+The [paired diabetes view](docs/DIABETES_VIEW.md) compares glucose with insulin on linked date ranges. Basal insulin is pink and bolus is orange when the export identifies the delivery type.
+
 ## Supported inputs
 
 - **FHIR records (JSONL/NDJSON):** direct SMART-on-FHIR downloads and user-supplied exports under `raw/fhir/<source>/`. Every resource is retained in `fhir_resources`; common clinical resources are also projected into labs, encounters, conditions, procedures, medications, immunizations, allergies, and documents.

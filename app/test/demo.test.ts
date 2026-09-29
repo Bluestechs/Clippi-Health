@@ -4,12 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const mock = vi.hoisted(() => ({
-  userData: "", code: "",
+  userData: "", code: "", packaged: false,
   handlers: new Map<string, (...args: any[]) => any>(),
   run: vi.fn(), dialog: vi.fn(), external: vi.fn(), send: vi.fn(),
 }));
 vi.mock("electron", () => ({
-  app: { isPackaged: false, getPath: () => mock.userData, getAppPath: () => join(mock.code, "app") },
+  app: { get isPackaged() { return mock.packaged; }, getPath: () => mock.userData, getAppPath: () => join(mock.code, "app") },
   ipcMain: { handle: (name: string, handler: (...args: any[]) => any) => mock.handlers.set(name, handler) },
   dialog: { showOpenDialog: mock.dialog }, shell: { openPath: mock.external, openExternal: mock.external },
 }));
@@ -27,6 +27,7 @@ let personal: string;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mock.packaged = false;
   temp = mkdtempSync(join(tmpdir(), "clippi-demo-test-"));
   mock.userData = join(temp, "settings");
   mock.code = join(temp, "code");
@@ -58,6 +59,27 @@ describe("isolated demo mode", () => {
     expect(getRoot()).toBe(demoRoot());
     await call("demo:set", false);
     expect(getRoot()).toBe(defaultRoot());
+  });
+
+  it("remembers the actual default folder across development and packaged launches", async () => {
+    rmSync(join(mock.userData, "config.json"));
+    const original = getRoot();
+    writeFileSync(join(original, "case_study_notes.md"), "Original record notes");
+    await call("demo:set", true);
+    // Re-opening an installed build changes the default, but must not change the return folder.
+    mock.packaged = true;
+    expect(defaultRoot()).not.toBe(original);
+    await call("demo:set", false);
+    expect(getRoot()).toBe(original);
+    expect(readFileSync(join(getRoot(), "case_study_notes.md"), "utf8")).toBe("Original record notes");
+  });
+
+  it("retains the chosen folder when it is temporarily unavailable", async () => {
+    await call("demo:set", true);
+    rmSync(personal, { recursive: true });
+    await call("demo:set", false);
+    expect(getRoot()).toBe(personal);
+    expect((await call("state:get")).valid).toBe(false);
   });
 
   it("leaves personal mode intact on generation failure and suppresses paths from errors", async () => {

@@ -622,6 +622,7 @@ def parse_apple_vitals(zpath):
     xml_name = next(n for n in z.namelist() if n.endswith("/export.xml"))
     means = defaultdict(lambda: [0.0, 0, float("inf"), float("-inf")])  # (date, metric) -> sum, n, min, max
     sums = defaultdict(float)  # (date, metric, source) -> total   (max across sources avoids double-counting)
+    insulin = defaultdict(lambda: defaultdict(float))  # (date, source) -> totals by recorded delivery reason
     glucose_in_range = defaultdict(lambda: [0, 0])
     sleep = defaultdict(float)  # (night, source) -> hours asleep
     type_counts = defaultdict(int)
@@ -644,6 +645,12 @@ def parse_apple_vitals(zpath):
                         day = el.get("startDate", "")[:10]
                         if how == "sum":
                             sums[(day, metric, el.get("sourceName"))] += v
+                            if metric == "Insulin":
+                                reasons = {m.get("value") for m in el.findall("MetadataEntry")
+                                           if m.get("key") in ("HKInsulinDeliveryReason", "HKMetadataKeyInsulinDeliveryReason")}
+                                reason = next(iter(reasons)) if len(reasons) == 1 else None
+                                label = {"1": "Insulin basal", "2": "Insulin bolus"}.get(reason, "Insulin unspecified")
+                                insulin[(day, el.get("sourceName"))][label] += v
                         else:
                             m = means[(day, metric)]
                             m[0] += v; m[1] += 1; m[2] = min(m[2], v); m[3] = max(m[3], v)
@@ -671,6 +678,16 @@ def parse_apple_vitals(zpath):
     for (day, metric), tot in best.items():
         unit = next(u for _, (m, u, _) in VITAL_TYPES.items() if m == metric)
         rows.append([day, metric, round(tot, 1), None, None, None, unit])
+    # Keep each day's breakdown from the SAME source as the chosen daily total. Taking
+    # independent maxima for basal and bolus could combine duplicate feeds into excess insulin.
+    chosen_insulin = {}
+    for (day, source), parts in insulin.items():
+        rank = (sums[(day, "Insulin", source)], -parts.get("Insulin unspecified", 0), source or "")
+        if day not in chosen_insulin or rank > chosen_insulin[day][0]:
+            chosen_insulin[day] = (rank, parts)
+    for day, (_, parts) in chosen_insulin.items():
+        for metric, total in parts.items():
+            rows.append([day, metric, round(total, 1), None, None, None, "U"])
     for day, (inr, n) in glucose_in_range.items():
         if n >= 12:  # enough readings to call it a CGM day
             rows.append([day, "Glucose time in range 70–180", round(100 * inr / n, 1), None, None, n, "%"])
@@ -685,7 +702,8 @@ def parse_apple_vitals(zpath):
 
 def apple_vitals(zpath):
     st = zpath.stat()
-    cache = DATA / f"apple_vitals_{st.st_size}_{int(st.st_mtime)}.json"
+    # v2 retains insulin delivery reasons; v1 caches only contained the combined daily total.
+    cache = DATA / f"apple_vitals_v2_{st.st_size}_{int(st.st_mtime)}.json"
     if cache.exists():
         return json.loads(cache.read_text(encoding="utf-8"))
     print(f"  parsing {zpath.name} device data (one-time, several minutes)…", flush=True)

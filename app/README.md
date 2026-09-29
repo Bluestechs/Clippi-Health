@@ -41,7 +41,7 @@ The palette button in the upper-right corner offers **System**, **Light · Paper
 
 The header's **Try demo** button opens Sally Seastar's synthetic diabetes record in an isolated local folder. Mode selection survives restart; **Exit demo** confirms before showing your records again. Imports, provider sign-ins and external windows are disabled while demonstrating the app. See [the recording walkthrough](../docs/DEMO.md). The smoke test now uses its own disposable profile and this demo, including chart zoom verification.
 
-- **Dashboard:** reads the generated local dashboard through the restricted `hp://root/` protocol.
+- **Dashboard:** reads the generated local dashboard through the restricted `hp://root/` protocol. Vitals pairs glucose with pink basal/orange bolus insulin charts and synchronized date zoom/reset; see [the diabetes view](../docs/DIABETES_VIEW.md).
 - **Sources:** lists the sources in the current build, guides BJC MyChart, Quest Diagnostics, and Labcorp imports, imports user-selected local email/document ZIPs without mailbox access, starts a direct SMART connector when a registered provider profile is available, or copies Apple Health, FHIR/C-CDA, PDFs, and ordinary files into `raw/` after showing a plan. Quest and Labcorp currently use Apple Health or official-report downloads while direct third-party OAuth registration is investigated. The dashboard's **Manage sources** button opens this tab when it is viewed inside the desktop app.
 - **Build:** runs `python3 healthpilot.py` and streams progress.
 - **Timeline events:** edits `curated_events.csv`.

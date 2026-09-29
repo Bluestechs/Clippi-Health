@@ -22,6 +22,7 @@ export async function runSmoke(window: BrowserWindow): Promise<void> {
     await promise;
   }
   await delay(1200);
+  const originalRoot = await window.webContents.executeJavaScript('(async () => (await window.hp.state()).root)()');
   await window.webContents.executeJavaScript('document.getElementById("demo-toggle").click()');
   let ready = false;
   for (let attempt = 0; attempt < 60; attempt++) {
@@ -108,6 +109,37 @@ export async function runSmoke(window: BrowserWindow): Promise<void> {
     return chart.layout.xaxis.range;
   })()`) as string[];
   if (zoom.length !== 2 || zoom[0] === zoom[1]) throw new Error("Demo CGM chart did not zoom");
+  const paired = await dashboard.executeJavaScript(`(async () => {
+    const glucose = document.querySelector('[data-diabetes-metric="glucose"] .js-plotly-plot');
+    const insulin = document.querySelector('[data-diabetes-metric="insulin"] .js-plotly-plot');
+    const sameRange = () => JSON.stringify(glucose.layout.xaxis.range) === JSON.stringify(insulin.layout.xaxis.range);
+    const fromGlucose = sameRange();
+    const dates = DATA.vitals.filter(r => r.metric === "Insulin").map(r => r.date);
+    await Plotly.relayout(insulin, { "xaxis.range": [dates.at(-7), dates.at(-1)] });
+    await new Promise(requestAnimationFrame);
+    const fromInsulin = sameRange();
+    await Plotly.relayout(insulin, { "xaxis.autorange": true });
+    await new Promise(requestAnimationFrame);
+    const reset = sameRange() && new Date(glucose.layout.xaxis.range[0]) < new Date(dates.at(-14));
+    const left = glucose.getBoundingClientRect(), right = insulin.getBoundingClientRect();
+    return { fromGlucose, fromInsulin, reset, sideBySide: right.left > left.left && Math.abs(right.top - left.top) < 5 };
+  })()`) as { fromGlucose: boolean; fromInsulin: boolean; reset: boolean; sideBySide: boolean };
+  if (!Object.values(paired).every(Boolean)) throw new Error(`Paired diabetes charts failed: ${JSON.stringify(paired)}`);
+  for (const theme of ["light", "dark"]) {
+    await window.webContents.executeJavaScript(`document.querySelector('[data-theme-value="${theme}"]').click()`);
+    await delay(300);
+    const colors = await dashboard.executeJavaScript(`(() => {
+      const insulin = document.querySelector('[data-diabetes-metric="insulin"] .js-plotly-plot');
+      const basal = insulin.data.filter(trace => trace.name.startsWith("Basal"));
+      const bolus = insulin.data.filter(trace => trace.name.startsWith("Bolus"));
+      return basal.length > 0 && bolus.length > 0 &&
+        basal.every(trace => trace.line.color === cssVar("--insulin-basal")) &&
+        bolus.every(trace => trace.line.color === cssVar("--c-orange"));
+    })()`);
+    if (!colors) throw new Error(`Insulin delivery types did not use pink/orange in ${theme} theme`);
+    writePrivateScreenshot(join(outDir, `diabetes-${theme}.png`), (await window.webContents.capturePage()).toPNG());
+  }
+  process.stdout.write(`Paired diabetes charts passed bidirectional zoom, reset, layout and basal/bolus colors in both themes.\n`);
   writePrivateScreenshot(join(outDir, "demo-vitals-zoom.png"), (await window.webContents.capturePage()).toPNG());
   await dashboard.executeJavaScript('showTab("labs")');
   await delay(500);
@@ -116,7 +148,9 @@ export async function runSmoke(window: BrowserWindow): Promise<void> {
   const returned = await window.webContents.executeJavaScript(`(async () => {
     const result = await window.hp.setDemo(false);
     const state = await window.hp.state();
-    return result.code === 0 && !state.demo;
+    return { ok: result.code === 0 && !state.demo, root: state.root, notes: await window.hp.notes() };
   })()`);
-  if (!returned) throw new Error("Could not exit demo mode");
+  if (!returned.ok || returned.root !== originalRoot || returned.notes !== "Smoke return-folder sentinel\n") {
+    throw new Error("Demo exit did not restore the original record folder and notes");
+  }
 }

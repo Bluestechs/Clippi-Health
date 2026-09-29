@@ -4,7 +4,7 @@ import { app, BrowserWindow, net, protocol, shell } from "electron";
 import squirrelStartup from "electron-squirrel-startup";
 import { pathToFileURL } from "node:url";
 import { join, normalize, resolve, sep } from "node:path";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { registerIpc } from "./ipc";
 import { runSmoke } from "./smoke";
@@ -24,6 +24,8 @@ if (process.argv.includes("--smoke")) {
   const temporary = mkdtempSync(join(tmpdir(), "clippi-health-smoke-store-"));
   app.setPath("userData", temporary);
   setRoot(join(temporary, "records"));
+  // Seed only the newly created disposable fixture, never a user-selected store.
+  writeFileSync(join(temporary, "records", "case_study_notes.md"), "Smoke return-folder sentinel\n", { flag: "wx", mode: 0o600 });
 }
 
 let mainWindow: BrowserWindow | null = null;

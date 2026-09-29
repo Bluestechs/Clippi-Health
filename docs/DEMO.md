@@ -8,12 +8,14 @@ The sample includes a year of simulated five-minute glucose readings, daily gluc
 
 1. Start at **Dashboard → Overview**. Click a timeline event and a topic.
 2. Open **Labs**, select A1c or glucose, and compare the quarterly results.
-3. Open **Vitals**. Drag across a glucose chart to zoom; double-click to reset. Try the date-range controls and scroll to insulin, carbohydrates, sleep and steps. The charts show daily summaries, not the individual five-minute samples.
+3. Open **Vitals**. The paired diabetes view shows glucose in blue beside basal insulin in pink and bolus in orange. Drag either chart to zoom both; double-click to reset. Scroll down for time in range, carbohydrates, sleep and steps. The charts show daily summaries, not the individual five-minute samples. See [the diabetes view](DIABETES_VIEW.md).
 4. Open **Records**, search for “diabetes,” and open a visit note.
 5. Explore the desktop **Sources**, **Build**, **Timeline events**, **Notes** and **Doctor** tabs. Rebuilding and editing demo notes/events work normally within the sample store.
 6. Stop recording, then select **Exit demo** and confirm that you want to show your personal records.
 
-Demo mode persists across restarts. A full screen reload clears the previous record's cached panels and log when switching. The personal data-folder selection is retained and restored on exit. If preparing the demo fails, the previous record remains selected behind a privacy cover until you explicitly return or retry. Switching is refused while another operation is running.
+Demo mode persists across restarts. A full screen reload clears the previous record's cached panels and log when switching. The exact personal data-folder path is saved when entering demo, even if it was previously an implicit default, and restored on exit. If that folder becomes unavailable, the app asks you to reconnect or select it instead of silently opening a different store. If preparing the demo fails, the previous record remains selected behind a privacy cover until you explicitly return or retry. Switching is refused while another operation is running.
+
+When moving from development to an installed app, connect your existing record folder through **Doctor → Change data folder** before recording. A fresh installed app starts with an empty local store; it does not scan your computer for medical records.
 
 Real file pickers, provider sign-ins, source configuration, data-folder changes and external windows are disabled in demo mode, including at the IPC boundary. Paths containing the operating-system username are not shown in the demo shell or log. Provider instructions can still be expanded and read. A separate browser or Tailscale dashboard you already opened continues to display its own data; demo mode changes only this desktop app's selected store. Record the app window rather than other windows or the whole desktop.
 

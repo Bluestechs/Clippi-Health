@@ -4,6 +4,10 @@ Updated 2026-09-29.
 
 ## Working now
 
+- Vitals pairs CGM and insulin side by side with linked zoom/reset. Basal insulin is pink and bolus orange in both themes, using delivery-reason metadata from Apple Health. Missing types remain unspecified; daily subtype totals stay with the selected source's combined total. A cache-version change reparses older exports on rebuild.
+
+- Demo mode now persists the exact personal return folder, including development defaults, across packaged launches. Unavailable folders stay selected with a recovery message. Regression tests cover both cases.
+
 - **Try demo** creates Sally Seastar's entirely synthetic diabetes record in a separate local store. A year of simulated CGM and daily device metrics, quarterly labs, notes and timeline events populate the app for recording. Mode persists across restart; returning to personal records requires confirmation. Imports, sign-ins and external windows are disabled in demo mode. The sample exercises the real import/build/chart pipeline, and smoke tests now use a disposable demo profile.
 - Populated demo coverage caught and fixed a stale care-team source lookup that could fail case-study generation when encounters included departments.
 
@@ -36,4 +40,4 @@ Updated 2026-09-29.
 
 ## Verification
 
-The current source catalog passes 26 Python unit tests, Electron type checking, 53 Electron component tests, the distribution PII audit, and the production-dependency audit. The bundled native engine passed build/query/connector checks from a clean data directory and generation/rebuild of the populated Sally Seastar demo. Both source and packaged desktop smoke runs passed all tabs, both explicit themes and CGM chart zoom checks using disposable profiles. GitHub Actions run 36618736252 built and verified DMG/ZIP artifacts for both Mac architectures, a Windows Squirrel installer, and Linux DEB/ZIP artifacts from commit `ed4c846`. A locally built macOS Apple Silicon app also passed strict bundle-signature verification and full UI screenshot smoke coverage across every tab and both explicit themes. Evaluation macOS artifacts are ad-hoc signed and Windows artifacts are unsigned until production credentials are configured.
+The current source catalog passes 31 Python unit tests, Electron type checking, 55 Electron component tests, the distribution PII audit, and the production-dependency audit. The bundled native engine passed build/query/connector checks from a clean data directory and generation/rebuild of the populated Sally Seastar demo. Both source and packaged desktop smoke runs passed all tabs, both explicit themes and CGM chart zoom checks using disposable profiles. GitHub Actions run 36618736252 built and verified DMG/ZIP artifacts for both Mac architectures, a Windows Squirrel installer, and Linux DEB/ZIP artifacts from commit `ed4c846`. A locally built macOS Apple Silicon app also passed strict bundle-signature verification and full UI screenshot smoke coverage across every tab and both explicit themes. Evaluation macOS artifacts are ad-hoc signed and Windows artifacts are unsigned until production credentials are configured.

@@ -10,7 +10,7 @@
   --page: #d2cbc0; --surface: #f0ebe3; --surface-2: #c2b8aa;
   --ink: #282522; --ink-2: #4c463f; --muted: #6a6258;
   --grid: #a89d8f; --axis: #8f8476; --border: rgba(40,37,34,0.18); --border-solid: #8f8476;
-  --series-1: #175f97; --series-2: #a64b20;
+  --series-1: #175f97; --series-2: #a64b20; --insulin-basal: #b04f85;
   --band: rgba(106,98,88,0.18); --wash: rgba(23,95,151,0.12); --series-1-wash: rgba(23,95,151,0.16);
   --good: #2e6f40; --serious: #a64b20; --critical: #a62f3e; --mark: #d8b86f;
   --c-blue: #175f97; --c-orange: #a64b20; --c-aqua: #26756d; --c-yellow: #8b6914; --c-magenta: #9b466f; --c-green: #2e6f40; --c-violet: #65519a; --c-red: #a62f3e;
@@ -21,7 +21,7 @@
     --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
     --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
     --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --border-solid: #2c2c2a;
-    --series-1: #3987e5; --series-2: #d95926;
+    --series-1: #3987e5; --series-2: #d95926; --insulin-basal: #f38bb6;
     --band: rgba(137,135,129,0.20); --wash: rgba(57,135,229,0.16); --series-1-wash: rgba(57,135,229,0.18);
     --mark: #5c4a12;
     --c-blue: #3987e5; --c-orange: #d95926; --c-aqua: #199e70; --c-yellow: #c98500; --c-magenta: #d55181; --c-green: #008300; --c-violet: #9085e9; --c-red: #e66767;
@@ -32,7 +32,7 @@
   --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
   --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
   --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --border-solid: #2c2c2a;
-  --series-1: #3987e5; --series-2: #d95926;
+  --series-1: #3987e5; --series-2: #d95926; --insulin-basal: #f38bb6;
   --band: rgba(137,135,129,0.20); --wash: rgba(57,135,229,0.16); --series-1-wash: rgba(57,135,229,0.18);
   --mark: #5c4a12;
   --c-blue: #3987e5; --c-orange: #d95926; --c-aqua: #199e70; --c-yellow: #c98500; --c-magenta: #d55181; --c-green: #008300; --c-violet: #9085e9; --c-red: #e66767;
@@ -88,6 +88,11 @@ label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--
 .test .n { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .test .last { grid-column: 1 / -1; color: var(--ink-2); font-size: 12px; }
 .charts { display: grid; gap: 16px; }
+.diabetes-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.diabetes-pair > .card { min-width: 0; display: flex; flex-direction: column; }
+.diabetes-pair .chart { margin-top: auto; }
+.diabetes-pair .sub { min-height: 3.5em; }
+@media (max-width: 860px) { .diabetes-pair { grid-template-columns: minmax(0, 1fr); } }
 .chart { width: 100%; }
 details summary { cursor: pointer; color: var(--ink-2); font-size: 13px; margin-top: 8px; }
 .empty { color: var(--muted); padding: 24px; text-align: center; }
@@ -623,7 +628,7 @@ function labCard(test, allPts, xr, start) {
 }
 
 // ---------- vitals ----------
-const VITAL_ORDER = ["CGM / meter glucose", "Glucose time in range 70–180", "Weight", "BP", "Resting heart rate", "HRV (SDNN)", "Blood oxygen", "Sleep", "Steps", "Insulin", "Carbs logged", "VO2 max", "Body fat"];
+const VITAL_ORDER = ["Glucose time in range 70–180", "Weight", "BP", "Resting heart rate", "HRV (SDNN)", "Blood oxygen", "Sleep", "Steps", "Carbs logged", "VO2 max", "Body fat"];
 function rolling(xs, ys, days) {
   const out = [], win = [];
   let sum = 0;
@@ -645,6 +650,9 @@ function renderVitals() {
     const start = startOf();
     const xr = [start || DATA.vitals.reduce((m, r) => r.date < m ? r.date : m, "9999"), new Date().toISOString().slice(0, 10)];
     const cards = [];
+    if (by.has("CGM / meter glucose") || by.has("Insulin")) {
+      cards.push(diabetesCard(by, xr, start));
+    }
     for (const key of VITAL_ORDER) {
       if (key === "BP") {
         const s = (by.get("BP systolic") || []).filter(r => !start || r.date >= start), d = (by.get("BP diastolic") || []).filter(r => !start || r.date >= start);
@@ -652,7 +660,7 @@ function renderVitals() {
         continue;
       }
       const rs = (by.get(key) || []).filter(r => !start || r.date >= start);
-      if (rs.length) cards.push(vitalCard(key, rs[0].unit, [[key, rs, "--series-1"]], xr, key === "CGM / meter glucose"));
+      if (rs.length) cards.push(vitalCard(key, rs[0].unit, [[key, rs, "--series-1"]], xr));
     }
     box.replaceChildren(...(cards.length ? cards : [h("div", { class: "card empty", text: "No device data in this date range." })]));
   }
@@ -666,16 +674,65 @@ function withGaps(rs, days) {
   }
   return out;
 }
-function vitalCard(title, unit, series, xr, minMax) {
-  const n = series[0][1].length;
+function diabetesCard(by, xr, start) {
+  const group = h("div", { class: "card diabetes-dashboard" },
+    h("h2", { text: "Diabetes · glucose & insulin" }),
+    h("p", { class: "sub", text: "Glucose in blue · basal insulin in pink · bolus in orange. Daily summaries on the same dates. Drag either chart to zoom both; double-click to reset." }));
+  const pair = h("div", { class: "diabetes-pair" });
+  const charts = [];
+  let syncing = false;
+  const link = chart => {
+    charts.push(chart);
+    if (charts.length !== 2) return;
+    for (const source of charts) source.on("plotly_relayout", event => {
+      if (syncing || !group.isConnected) return;
+      const reset = event["xaxis.autorange"] === true;
+      const range = reset ? xr : event["xaxis.range"] ||
+        (event["xaxis.range[0]"] != null && event["xaxis.range[1]"] != null
+          ? [event["xaxis.range[0]"], event["xaxis.range[1]"]] : null);
+      if (!range) return; // resizing and y-only changes should not move the shared date window
+      syncing = true;
+      const targets = reset ? charts : charts.filter(target => target !== source);
+      Promise.all(targets.map(target => Plotly.relayout(target, { "xaxis.range": range, "xaxis.autorange": false })))
+        .finally(() => { syncing = false; });
+    });
+  };
+  const visible = metric => (by.get(metric) || []).filter(r => !start || r.date >= start);
+  const insulinSeries = [
+    ["Basal", visible("Insulin basal"), "--insulin-basal"],
+    ["Bolus", visible("Insulin bolus"), "--c-orange"],
+    ["Type unspecified", visible("Insulin unspecified"), "--muted", "dot"],
+  ].filter(([, records]) => records.length);
+  const classifiedDates = new Set(insulinSeries.flatMap(([, records]) => records.map(r => r.date)));
+  const legacy = visible("Insulin").filter(r => !classifiedDates.has(r.date));
+  if (legacy.length) insulinSeries.push(["Total · type unavailable", legacy, "--c-orange", "dot"]);
+  const glucose = visible("CGM / meter glucose");
+  for (const [metric, title, unit, series, minMax] of [
+    ["glucose", "CGM / meter glucose", "mg/dL", glucose.length ? [["Glucose", glucose, "--series-1"]] : [], true],
+    ["insulin", "Insulin delivered · daily totals", "U", insulinSeries, false],
+  ]) {
+    const panel = series.length
+      ? vitalCard(title, unit, series, xr, minMax, link)
+      : h("div", { class: "card empty" }, h("h2", { text: `${title} (${unit})` }),
+          h("p", { text: `No ${metric} data in this date range.` }));
+    panel.setAttribute("data-diabetes-metric", metric);
+    pair.append(panel);
+  }
+  if (legacy.length) group.append(h("p", { class: "sub", text: "Some insulin totals have no delivery-type breakdown in this build. Rebuild from the original export to read any available basal/bolus labels." }));
+  group.append(pair);
+  return group;
+}
+function vitalCard(title, unit, series, xr, minMax, onReady) {
+  const dates = [...new Set(series.flatMap(([, records]) => records.map(r => r.date)))].sort();
+  const n = dates.length;
   const dense = n > 120;
   const card = h("div", { class: "card" }, h("h2", { text: `${title} (${unit})` }),
-    h("p", { class: "sub", text: `${n.toLocaleString()} days with data · ${fmtDate(series[0][1][0].date)} – ${fmtDate(series[0][1][n - 1].date)}${dense ? " · thin line = daily, thick = 30-day average" : ""}${minMax ? " · wash = daily min–max" : ""}` }));
-  if (series.length > 1) card.append(h("div", { class: "legend" }, series.map(([name, , color]) => h("span", null, h("i", { style: `border-color:${cssVar(color)}` }), name))));
+    h("p", { class: "sub", text: `${n.toLocaleString()} days with data · ${fmtDate(dates[0])} – ${fmtDate(dates[n - 1])}${dense ? " · thin line = daily, thick = 30-day average" : ""}${minMax ? " · wash = daily min–max" : ""}` }));
+  if (series.length > 1 || onReady) card.append(h("div", { class: "legend" }, series.map(([name, , color]) => h("span", null, h("i", { style: `border-color:${cssVar(color)}` }), name))));
   const chart = h("div", { class: "chart" });
   card.append(chart);
   const traces = [];
-  for (const [name, raw, color] of series) {
+  for (const [name, raw, color, dash] of series) {
     const rs = withGaps(raw, 14);
     const x = rs.map(r => r.date), y = rs.map(r => r.value);
     if (minMax) {  // one min–max wash per contiguous run, so the fill never spans a data gap
@@ -691,16 +748,17 @@ function vitalCard(title, unit, series, xr, minMax) {
       flush();
     }
     traces.push({ type: "scatter", mode: dense ? "lines" : "lines+markers", x, y, name,
-      line: { width: dense ? 1 : 2, color: cssVar(color) }, opacity: dense ? 0.4 : 1,
+      line: { width: dense ? 1 : 2, color: cssVar(color), dash }, opacity: dense ? 0.4 : 1,
       marker: { size: 7, color: cssVar(color), line: { width: 2, color: cssVar("--surface") } },
       hovertemplate: `<b>%{y} ${unit}</b> ${series.length > 1 ? name : ""}<br>%{x|%b %d, %Y}<extra></extra>` });
     const real = rs.filter(r => r.value != null);
     const avg = rolling(real.map(r => r.date), real.map(r => r.value), 30);
     let k = 0;
-    if (dense) traces.push({ type: "scatter", mode: "lines", x, y: rs.map(r => r.value == null ? null : avg[k++]), name: name + " (30-day avg)", line: { width: 2, color: cssVar(color) },
+    if (dense) traces.push({ type: "scatter", mode: "lines", x, y: rs.map(r => r.value == null ? null : avg[k++]), name: name + " (30-day avg)", line: { width: 2, color: cssVar(color), dash },
       hovertemplate: `<b>%{y} ${unit}</b> 30-day avg<br>%{x|%b %d, %Y}<extra></extra>` });
   }
-  requestAnimationFrame(() => Plotly.newPlot(chart, traces, baseLayout({ height: 220, xaxis: { range: xr } }), plotConfig));
+  requestAnimationFrame(() => Plotly.newPlot(chart, traces, baseLayout({ height: 220, xaxis: { range: xr } }), plotConfig)
+    .then(() => { if (onReady) onReady(chart); }));
   return card;
 }
 

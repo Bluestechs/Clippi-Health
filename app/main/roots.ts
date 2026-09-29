@@ -53,7 +53,11 @@ export const demoRoot = (): string => join(app.getPath("userData"), "demo-record
 export const isDemo = (): boolean => config().demo === true;
 /** Called only after a successful demo build; retain the personal folder for the return trip. */
 export function setDemoMode(enabled: boolean): void {
-  saveConfig({ ...config(), demo: enabled });
+  const saved = config();
+  // Capture the resolved personal folder before selecting the demo, including an implicit
+  // development default. Installed builds have a different default; it is not a return address.
+  const root = saved.root || (saved.demo ? defaultRoot() : getRoot());
+  saveConfig({ ...saved, root, demo: enabled });
 }
 
 /** Existing source checkouts and initialized installed stores are both valid data roots. */
@@ -82,7 +86,8 @@ export function getRoot(): string {
   const saved = config();
   // Fail closed: a missing demo store must never fall back to personal records.
   if (saved.demo === true) return demoRoot();
-  if (saved.root && existsSync(saved.root)) return saved.root;
+  // A disconnected drive or moved folder must not silently select a different record store.
+  if (saved.root) return saved.root;
   const root = defaultRoot();
   initializeRoot(root);
   return root;

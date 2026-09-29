@@ -113,11 +113,12 @@ def generate(root, today=None):
     # The app deliberately displays daily mean/min/max and TIR, just as for real imports.
     xml = ['<?xml version="1.0" encoding="UTF-8"?><HealthData>']
 
-    def record(kind, value, unit, start, end=None):
+    def record(kind, value, unit, start, end=None, reason=None):
         attrs = {"type": kind, "value": str(value), "unit": unit, "sourceName": "Seastar simulated device",
                  "startDate": start.strftime("%Y-%m-%d %H:%M:%S +0000"),
                  "endDate": (end or start).strftime("%Y-%m-%d %H:%M:%S +0000")}
-        xml.append("<Record " + " ".join(k + "=" + quoteattr(v) for k, v in attrs.items()) + "/>")
+        metadata = f'<MetadataEntry key="HKInsulinDeliveryReason" value="{reason}"/>' if reason else ""
+        xml.append("<Record " + " ".join(k + "=" + quoteattr(v) for k, v in attrs.items()) + ">" + metadata + "</Record>")
 
     for day in range(365):
         stamp = datetime.combine(today - timedelta(days=365 - day), time())
@@ -138,10 +139,13 @@ def generate(root, today=None):
             ("HeartRateVariabilitySDNN", "ms", 44 + rng.uniform(-12, 12)),
             ("OxygenSaturation", "%", 98 + rng.uniform(-1, 1)),
             ("StepCount", "count", rng.randint(3500, 12500)),
-            ("InsulinDelivery", "IU", 34 + rng.uniform(-6, 8)),
             ("DietaryCarbohydrates", "g", 155 + rng.uniform(-40, 50)),
         ]:
             record("HKQuantityTypeIdentifier" + kind, round(value, 1), unit, stamp + timedelta(hours=12))
+        record("HKQuantityTypeIdentifierInsulinDelivery", round(18 + rng.uniform(-3, 3), 1), "IU", stamp, reason="1")
+        for hour in (8, 13, 19):
+            record("HKQuantityTypeIdentifierInsulinDelivery", round(rng.uniform(3, 7), 1), "IU",
+                   stamp + timedelta(hours=hour), reason="2")
         wake = stamp + timedelta(hours=7)
         record("HKCategoryTypeIdentifierSleepAnalysis", "HKCategoryValueSleepAnalysisAsleepCore", "",
                wake - timedelta(hours=rng.uniform(6.2, 8.7)), wake)

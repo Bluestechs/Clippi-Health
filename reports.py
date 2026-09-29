@@ -516,6 +516,9 @@ curated_events.csv           hand-written timeline rows → events (curated=1)
             rollup, hk = "% of that day's readings between 70 and 180 mg/dL, on days with ≥12 readings", "derived from HKQuantityTypeIdentifierBloodGlucose"
         if r["metric"] == "Sleep":
             rollup, hk = "hours in 'asleep' stages, credited to the wake-up date", "HKCategoryTypeIdentifierSleepAnalysis"
+        if r["metric"] in ("Insulin basal", "Insulin bolus", "Insulin unspecified"):
+            hk = "HKQuantityTypeIdentifierInsulinDelivery + HKInsulinDeliveryReason"
+            rollup = "daily total by recorded delivery reason, from the same source selected for total insulin; missing or unknown reasons stay unspecified"
         vrows.append({"metric": r["metric"], "unit": r["unit"], "days": r["days"], "first": r["first"], "last": r["last"], "hk": hk, "rollup": rollup})
     add(md_table(vrows, ["metric", "unit", "days", "first", "last", "hk", "rollup"], ["Metric", "Unit", "Days", "First", "Last", "HealthKit type", "Roll-up"]))
     hk_counts = json.loads(meta(db, "apple_record_types") or "{}")

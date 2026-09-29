@@ -163,9 +163,10 @@ async function refreshState(): Promise<void> {
     el<HTMLButtonElement>(id).disabled = state.demo;
   }
   el("root-path").textContent = state.root;
-  el("dashboard-note").textContent = state.dashboard
-    ? ""
-    : "No dashboard yet — add data, then rebuild on the Build tab.";
+  el("dashboard-note").textContent = !state.valid
+    ? "The selected data folder is unavailable. Reconnect it or choose your existing records in Doctor → Change data folder."
+    : state.dashboard ? ""
+      : "No dashboard yet — add data, then rebuild on the Build tab.";
   const frame = el<HTMLIFrameElement>("dashboard");
   // An empty white frame reads as a broken app: hide it until there is a file to serve and let
   // #dashboard-note say why. The timestamp defeats the cache after a rebuild.
