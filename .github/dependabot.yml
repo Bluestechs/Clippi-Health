@@ -1,0 +1,47 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /app
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      electron-toolchain:
+        patterns:
+          - electron
+          - "@electron/*"
+          - "@electron-forge/*"
+      javascript-development:
+        patterns:
+          - esbuild
+          - typescript
+          - vitest
+          - "@types/*"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: pip
+    directory: /packaging
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      python-runtime:
+        patterns:
+          - pyinstaller
+          - pypdf
+      security-tooling:
+        patterns:
+          - pip-audit
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10

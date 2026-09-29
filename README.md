@@ -125,6 +125,8 @@ Clippi-Health does not include telemetry or operate a hosted service. Direct con
 
 `raw/`, `email/`, `data/`, `dashboard.html`, curated notes, and connection metadata can contain protected health information. They are ignored by Git and must not be committed.
 
+The maintained threat model, assessment scope, security controls, and residual risks are documented in [SECURITY_MODEL.md](SECURITY_MODEL.md). Report suspected vulnerabilities through the private process in [SECURITY.md](SECURITY.md); do not include real health data in a report.
+
 ## License
 
 Clippi-Health is licensed under the [Apache License 2.0](LICENSE). Bundled third-party components retain their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -40,6 +40,6 @@ included at `vendor/LICENSE.pyinstaller.txt` and copied into app builds.
 
 ## pypdf
 
-Desktop packages include pypdf 6.7.0 for portable PDF text extraction. pypdf is
+Desktop packages include pypdf 6.19.0 for portable PDF text extraction. pypdf is
 licensed under the BSD 3-Clause License. The complete license is included at
 `vendor/LICENSE.pypdf.txt` and copied into app builds.
