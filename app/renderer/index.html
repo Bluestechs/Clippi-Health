@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-src hp:; connect-src 'self'">
+<title>Clippi-Health</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <div class="head">
+    <img class="brand-logo" src="logo.png" alt="">
+    <h1>Clippi-Health</h1>
+    <span class="who" id="who"></span>
+    <span class="built" id="built"></span>
+    <div class="theme-picker" id="theme-picker">
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Choose color theme" aria-haspopup="menu" aria-expanded="false" title="Choose color theme"><span aria-hidden="true">🎨</span></button>
+      <div id="theme-menu" class="theme-menu" role="menu" aria-label="Color theme" hidden>
+        <button type="button" data-theme-value="system" role="menuitemradio" aria-checked="false"><span>System</span><span class="theme-check" aria-hidden="true">✓</span></button>
+        <button type="button" data-theme-value="light" role="menuitemradio" aria-checked="false"><span>Light · Paper</span><span class="theme-check" aria-hidden="true">✓</span></button>
+        <button type="button" data-theme-value="dark" role="menuitemradio" aria-checked="false"><span>Dark</span><span class="theme-check" aria-hidden="true">✓</span></button>
+      </div>
+    </div>
+  </div>
+  <nav id="tabs">
+    <button data-tab="dashboard" aria-selected="true">Dashboard</button>
+    <button data-tab="import">Sources</button>
+    <button data-tab="build">Build</button>
+    <button data-tab="events">Timeline events</button>
+    <button data-tab="notes">Notes</button>
+    <button data-tab="doctor">Doctor</button>
+  </nav>
+</header>
+
+<main>
+  <section id="tab-dashboard">
+    <div class="row">
+      <button id="open-external" class="ghost">Open in browser</button>
+      <span class="muted" id="dashboard-note"></span>
+    </div>
+    <iframe id="dashboard" title="Dashboard"></iframe>
+  </section>
+
+  <section id="tab-import" hidden>
+    <div class="card">
+      <h2>Your data sources</h2>
+      <p class="sub">Add a new source or refresh an existing one below. Imports and connections stay on this computer.</p>
+      <div id="current-sources" class="source-list">Loading sources…</div>
+    </div>
+    <div class="card">
+      <h2>Import email or documents</h2>
+      <p class="sub">Choose a ZIP already saved on this computer. Clippi-Health reads it locally during the rebuild; it never signs in to an email account or contacts an email service.</p>
+      <div class="export-help">
+        <div><strong>Gmail</strong><span>Search, select the matching conversations, and apply a temporary label. In Google Takeout, deselect everything, select Mail, choose only that label under “All Mail data included,” and create a one-time ZIP export.</span></div>
+        <div><strong>Outlook 365</strong><span>In Outlook on the web or new Outlook, search, open each result, and use <em>More actions (…) → Download</em>. Put the downloaded <code>.eml</code> files in one folder, then compress that folder to ZIP.</span></div>
+        <div><strong>Documents</strong><span>Put the PDFs, DOCX, HTML, text, XML, or image files you want to add in a folder, then compress that folder to ZIP.</span></div>
+      </div>
+      <p class="sub archive-note">Gmail Takeout MBOX and standard EML are supported. Outlook PST, OLM, and MSG files are not read yet.</p>
+      <button id="archive-import-choose">Choose export ZIP…</button>
+      <div id="archive-import-plan"></div>
+    </div>
+    <div class="card">
+      <h2>Connect a health system</h2>
+      <p class="sub">Sign in on the health system's own page. The local helper downloads FHIR directly to this computer and forgets the OAuth token when the import ends.</p>
+      <div id="connector-list" class="connector-list">Loading local connector profiles…</div>
+    </div>
+    <div class="card">
+      <h2>Add health data</h2>
+      <p class="sub">An Apple Health export ZIP (iPhone → Health → profile → Export All Health Data), a portal
+        “Download my record” folder, or loose PDFs. Files are copied into the local data folder — the build never changes them.</p>
+      <button id="import-choose">Choose files or folders…</button>
+      <div id="import-plan"></div>
+    </div>
+  </section>
+
+  <section id="tab-build" hidden>
+    <div class="card">
+      <h2>Rebuild the record</h2>
+      <p class="sub">Reads everything in raw/ and writes data/health.db, the reference documents and
+        dashboard.html. The Apple device-data pass takes about 30 seconds.</p>
+      <button id="build-run">Rebuild now</button>
+      <span class="muted" id="build-state"></span>
+    </div>
+    <div class="card" id="summary-card" hidden>
+      <h2>What is here</h2>
+      <div id="summary"></div>
+    </div>
+  </section>
+
+  <section id="tab-events" hidden>
+    <div class="card">
+      <h2>curated_events.csv</h2>
+      <p class="sub">Hand-written timeline events. <code>docs</code> cites records as
+        <code>YYYY-MM-DD|Title</code>, separated by <code>;</code>. <code>replaces</code> hides a generated
+        event with the same date and title.</p>
+      <div class="row">
+        <button id="events-add">Add row</button>
+        <button id="events-save">Save</button>
+        <span class="muted" id="events-state"></span>
+      </div>
+      <div class="table-scroll"><table id="events-table"></table></div>
+    </div>
+  </section>
+
+  <section id="tab-notes" hidden>
+    <div class="card">
+      <h2>case_study_notes.md</h2>
+      <p class="sub">Your own notes and questions. Appended verbatim to data/CASE_STUDY.md on every build.</p>
+      <div class="row">
+        <button id="notes-save">Save</button>
+        <span class="muted" id="notes-state"></span>
+      </div>
+      <textarea id="notes" spellcheck="true"></textarea>
+    </div>
+  </section>
+
+  <section id="tab-doctor" hidden>
+    <div class="card">
+      <h2>Doctor</h2>
+      <p class="sub">Prerequisites and the state of this data folder.</p>
+      <div class="row">
+        <button id="doctor-run">Run checks</button>
+        <span class="muted" id="root-path"></span>
+        <button id="root-choose" class="ghost">Change data folder…</button>
+      </div>
+      <div id="doctor-list"></div>
+    </div>
+  </section>
+</main>
+
+<div id="drawer">
+  <div class="drawer-head">
+    <button id="log-toggle" class="ghost">Log</button>
+    <span class="muted" id="log-last"></span>
+  </div>
+  <pre id="log" hidden></pre>
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>

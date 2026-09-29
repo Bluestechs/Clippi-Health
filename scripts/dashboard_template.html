@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clippi-Health</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #d2cbc0; --surface: #f0ebe3; --surface-2: #c2b8aa;
+  --ink: #282522; --ink-2: #4c463f; --muted: #6a6258;
+  --grid: #a89d8f; --axis: #8f8476; --border: rgba(40,37,34,0.18); --border-solid: #8f8476;
+  --series-1: #175f97; --series-2: #a64b20;
+  --band: rgba(106,98,88,0.18); --wash: rgba(23,95,151,0.12); --series-1-wash: rgba(23,95,151,0.16);
+  --good: #2e6f40; --serious: #a64b20; --critical: #a62f3e; --mark: #d8b86f;
+  --c-blue: #175f97; --c-orange: #a64b20; --c-aqua: #26756d; --c-yellow: #8b6914; --c-magenta: #9b466f; --c-green: #2e6f40; --c-violet: #65519a; --c-red: #a62f3e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
+    --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --border-solid: #2c2c2a;
+    --series-1: #3987e5; --series-2: #d95926;
+    --band: rgba(137,135,129,0.20); --wash: rgba(57,135,229,0.16); --series-1-wash: rgba(57,135,229,0.18);
+    --mark: #5c4a12;
+    --c-blue: #3987e5; --c-orange: #d95926; --c-aqua: #199e70; --c-yellow: #c98500; --c-magenta: #d55181; --c-green: #008300; --c-violet: #9085e9; --c-red: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
+  --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --border-solid: #2c2c2a;
+  --series-1: #3987e5; --series-2: #d95926;
+  --band: rgba(137,135,129,0.20); --wash: rgba(57,135,229,0.16); --series-1-wash: rgba(57,135,229,0.18);
+  --mark: #5c4a12;
+  --c-blue: #3987e5; --c-orange: #d95926; --c-aqua: #199e70; --c-yellow: #c98500; --c-magenta: #d55181; --c-green: #008300; --c-violet: #9085e9; --c-red: #e66767;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--page); color: var(--ink); }
+body { font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color: var(--series-1); }
+header { position: sticky; top: 0; z-index: 5; background: var(--page); border-bottom: 1px solid var(--border); }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
+.head { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; padding: 14px 0 6px; }
+.head h1 { font-size: 18px; margin: 0; font-weight: 650; }
+.head .who { color: var(--ink-2); }
+.head .built { color: var(--muted); font-size: 12px; margin-left: auto; }
+.manage-sources { flex: none; }
+nav { display: flex; gap: 4px; overflow-x: auto; }
+nav button { font: inherit; background: none; border: 0; padding: 8px 12px; color: var(--ink-2); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+nav button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--series-1); font-weight: 600; }
+main { padding: 20px 0 48px; }
+section[hidden] { display: none; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; min-width: 0; }
+.card h2 { font-size: 15px; margin: 0 0 2px; font-weight: 600; }
+.card .sub { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
+.grid { display: grid; gap: 16px; }
+.cols-2 { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.tile .label { color: var(--ink-2); font-size: 12px; }
+.tile .value { font-size: 24px; font-weight: 600; margin-top: 2px; }
+.tile .note { color: var(--muted); font-size: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-weight: 600; color: var(--ink-2); border-bottom: 1px solid var(--border-solid); padding: 6px 8px 6px 0; }
+td { border-bottom: 1px solid var(--border); padding: 6px 8px 6px 0; vertical-align: top; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.pill { display: inline-block; font-size: 11px; color: var(--ink-2); border: 1px solid var(--border-solid); border-radius: 999px; padding: 0 7px; white-space: nowrap; }
+.flag { font-weight: 600; white-space: nowrap; }
+.flag.high, .flag.low, .flag.abnormal { color: var(--critical); }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+input[type=search], select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border-solid); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+input[type=search] { flex: 1 1 240px; }
+.seg { display: inline-flex; border: 1px solid var(--border-solid); border-radius: 8px; overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; background: var(--surface); color: var(--ink-2); border: 0; padding: 6px 10px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--border-solid); }
+.seg button[aria-pressed="true"] { background: var(--wash); color: var(--ink); font-weight: 600; }
+label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--ink-2); font-size: 13px; }
+.labs-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
+.testlist { max-height: calc(100vh - 190px); overflow: auto; position: sticky; top: 110px; padding: 8px; }
+.testlist h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 12px 6px 4px; }
+.test { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; width: 100%; text-align: left; font: inherit; color: var(--ink); background: none; border: 0; border-radius: 6px; padding: 6px 8px; cursor: pointer; }
+.test:hover { background: var(--surface-2); }
+.test[aria-pressed="true"] { background: var(--wash); }
+.test .n { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.test .last { grid-column: 1 / -1; color: var(--ink-2); font-size: 12px; }
+.charts { display: grid; gap: 16px; }
+.chart { width: 100%; }
+details summary { cursor: pointer; color: var(--ink-2); font-size: 13px; margin-top: 8px; }
+.empty { color: var(--muted); padding: 24px; text-align: center; }
+.event-detail { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+.event-detail[hidden] { display: none; }
+.event-detail .t { font-weight: 600; }
+.event-detail p { margin: 6px 0; white-space: pre-wrap; color: var(--ink-2); }
+.linkbtn { font: inherit; background: none; border: 0; color: var(--series-1); cursor: pointer; padding: 0; text-align: left; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: inherit; font-size: 13px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--border-solid); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--wash); color: var(--ink); border-color: transparent; font-weight: 600; }
+.records-layout { display: grid; grid-template-columns: minmax(280px, 400px) 1fr; gap: 16px; align-items: start; }
+.results { max-height: calc(100vh - 230px); overflow: auto; padding: 4px; }
+.result { display: block; width: 100%; text-align: left; font: inherit; color: var(--ink); background: none; border: 0; border-bottom: 1px solid var(--border); padding: 10px 8px; cursor: pointer; }
+.result:hover { background: var(--surface-2); }
+.result[aria-current="true"] { background: var(--wash); }
+.result .meta { color: var(--muted); font-size: 12px; }
+.result .snip { color: var(--ink-2); font-size: 12px; margin-top: 2px; }
+.reader { position: sticky; overflow-anchor: none; top: 110px; max-height: calc(100vh - 130px); overflow: auto; }
+.reader .body { white-space: pre-wrap; font-size: 13px; line-height: 1.55; margin-top: 12px; }
+mark { background: var(--mark); color: inherit; border-radius: 2px; }
+ul.plain { list-style: none; padding: 0; margin: 0; }
+ul.plain li { padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.legend { display: flex; gap: 14px; color: var(--ink-2); font-size: 12px; margin: 0 0 6px; }
+.legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 5px; }
+/* Color cues. One hue always means one thing: --kc = record kind, --tc = topic, --sc = source, lanes on the timeline. */
+.tile { border-top: 3px solid var(--tc, var(--border-solid)); }
+.topics { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.topic-card { border: 1px solid var(--border); border-left: 5px solid var(--tc); border-radius: 8px; padding: 10px 12px; background: color-mix(in srgb, var(--tc) 6%, var(--surface)); }
+.topic-card .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.topic-card .stats { font-size: 12px; color: var(--ink-2); margin: 6px 0; }
+.topic-card .actions { display: flex; gap: 6px; }
+.status { font-size: 11px; border-radius: 999px; padding: 0 7px; border: 1px solid var(--border-solid); color: var(--ink-2); }
+.status.focus { background: var(--tc); color: #fff; border-color: transparent; font-weight: 600; }
+.tag { display: inline-block; font-size: 11px; font-weight: 500; color: var(--ink); background: color-mix(in srgb, var(--tc) 16%, transparent); border-radius: 999px; padding: 0 7px 0 5px; white-space: nowrap; margin-right: 4px; }
+.tag::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--tc); margin-right: 5px; vertical-align: 1px; }
+.tags { margin-top: 3px; }
+.pill.src::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--sc); margin-right: 5px; vertical-align: 1px; }
+.chip .sw, .legend i.sw { display: inline-block; width: 10px; height: 10px; border: 0; border-radius: 3px; background: var(--kc); margin-right: 6px; vertical-align: -1px; }
+.chip.topic { border-left: 4px solid var(--tc); }
+.chip.topic[aria-pressed="true"] { background: color-mix(in srgb, var(--tc) 18%, transparent); }
+.result { border-left: 4px solid var(--kc); padding-left: 10px; }
+.result .row, .reader .row { display: flex; gap: 8px; align-items: baseline; }
+.kind { flex: none; font-size: 11px; font-weight: 600; color: var(--ink-2); background: color-mix(in srgb, var(--kc) 18%, transparent); border-radius: 4px; padding: 0 6px; white-space: nowrap; }
+.reader .row h2 { margin: 0; }
+.test.abn { border-left: 3px solid var(--critical); }
+.test .n { display: inline-flex; gap: 5px; align-items: center; }
+.dots { display: inline-flex; gap: 3px; vertical-align: 1px; }
+.dots i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.card.topic-edge { border-left: 4px solid var(--tc); }
+tr.abn td { background: color-mix(in srgb, var(--critical) 8%, transparent); }
+.back-results { display: none; }
+@media (max-width: 860px) {
+  nav button { min-height: 44px; }
+  .labs-layout, .records-layout { grid-template-columns: 1fr; }
+  .testlist, .reader, .results { position: static; max-height: none; }
+  .testlist { max-height: 45vh; }
+  .filter-panel { position: sticky; top: 44px; z-index: 4; background: var(--page); padding: 8px 0 2px; margin-bottom: 8px; }
+  .filter-panel .controls { margin-bottom: 6px; }
+  .filter-panel .chips { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .filter-panel .chips > * { flex: none; white-space: nowrap; }
+  #tab-records:has(.viewing-record) .filter-panel { display: none; }
+  #reader, #rec-list { scroll-margin-top: 52px; }
+  .records-layout.viewing-record .results { display: none; }
+  .records-layout:not(.viewing-record) .reader { display: none; }
+  .back-results { display: inline-block; margin-bottom: 12px; }
+}
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+  .wrap { padding: 0 12px; }
+  .head { padding: 9px 0 4px; gap: 2px 10px; }
+  .head .built { margin-left: 0; flex-basis: 100%; }
+  nav { margin: 0 -12px; padding: 0 12px; scrollbar-width: none; }
+  nav button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 8px 4px; }
+  main { padding-top: 12px; }
+  .grid, .charts, .labs-layout, .records-layout { gap: 12px; }
+  .cols-2, .topics { grid-template-columns: minmax(0, 1fr); }
+  .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .tile { padding: 9px; }
+  .tile .value { font-size: 19px; overflow-wrap: anywhere; }
+  .card { padding: 12px; }
+  .controls input[type=search] { flex-basis: 100%; font-size: 16px; min-height: 44px; }
+  .controls select { font-size: 16px; min-height: 44px; width: 100%; }
+  #tab-labs .filter-panel .controls > #lab-range { order: 1; }
+  #tab-labs .filter-panel .controls > #lab-clear { order: 2; }
+  #tab-labs .filter-panel .controls > label.check { order: 3; flex-basis: 100%; min-height: 32px; }
+  .seg { max-width: 100%; }
+  .seg button { min-height: 44px; padding: 8px 12px; }
+  .chip, .topic-card .chip { min-height: 44px; padding: 8px 12px; }
+  .filter-panel .chip { white-space: nowrap; }
+  .test, .result { min-height: 48px; padding-top: 10px; padding-bottom: 10px; }
+  .testlist { max-height: 40vh; }
+  .reader .body { font-size: 15px; overflow-wrap: anywhere; }
+  .reader .row { flex-wrap: wrap; }
+  .linkbtn { min-height: 40px; padding: 6px 0; }
+  .card table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .card table th, .card table td { min-width: 65px; }
+  .legend { flex-wrap: wrap; gap: 5px 12px; }
+}
+@media print {
+  header nav, .controls, .no-print { display: none !important; }
+  header { position: static; }
+  section[hidden] { display: block; }
+  .card { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="site-head">
+  <div class="wrap">
+    <div class="head">
+      <h1>Clippi-Health</h1>
+      <span class="who" id="who"></span>
+      <span class="built" id="built"></span>
+      <button class="chip manage-sources no-print" id="manage-sources">Manage sources</button>
+    </div>
+  </div>
+</div>
+<header>
+  <div class="wrap">
+    <nav role="tablist" id="tabs">
+      <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+      <button role="tab" data-tab="labs" aria-selected="false">Labs</button>
+      <button role="tab" data-tab="vitals" aria-selected="false">Vitals</button>
+      <button role="tab" data-tab="records" aria-selected="false">Records</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap">
+  <section id="tab-overview">
+    <div class="tiles" id="tiles"></div>
+    <div class="card" style="margin-bottom:16px" id="focus-card">
+      <h2>Focus</h2>
+      <p class="sub">Topics from topics.json. Each topic keeps its color everywhere: tags on records, dots on lab tests, filters.</p>
+      <div class="topics" id="focus"></div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <h2>Timeline</h2>
+      <p class="sub">Diagnoses, surgeries and procedures, hospital and ED visits, imaging, and reports. Hover for the name; click for details and linked notes. Drag to zoom, double-click to reset.</p>
+      <div class="legend" id="timeline-legend"></div>
+      <div id="timeline" class="chart"></div>
+      <div class="event-detail" id="event-detail" hidden></div>
+    </div>
+    <div class="grid cols-2">
+      <div class="card"><h2>Problem list</h2><p class="sub">As recorded by each health system, with the date first noted</p><div id="problems"></div></div>
+      <div class="card"><h2>Medical &amp; surgical history</h2><p class="sub">Source history entries, which are often undated</p><div id="history"></div></div>
+      <div class="card"><h2>Medications</h2><p class="sub">Medication statements and requests from connected sources</p><div id="meds"></div></div>
+      <div class="card"><h2>Immunizations &amp; allergies</h2><p class="sub">&nbsp;</p><div id="imm"></div></div>
+    </div>
+  </section>
+
+  <section id="tab-labs" hidden>
+    <div class="filter-panel">
+    <div class="controls">
+      <input type="search" id="test-filter" placeholder="Find a test (e.g. A1c, creatinine, IgG)">
+      <div class="seg" id="lab-range"></div>
+      <label class="check"><input type="checkbox" id="lab-events" checked> Mark diagnoses, treatments &amp; procedures</label>
+      <button class="chip" id="lab-clear">Clear selection</button>
+    </div>
+    <div class="controls chips" id="lab-topics"></div>
+    </div>
+    <div class="labs-layout">
+      <div class="card testlist" id="testlist"></div>
+      <div class="charts" id="labcharts"></div>
+    </div>
+  </section>
+
+  <section id="tab-vitals" hidden>
+    <div class="filter-panel"><div class="controls"><div class="seg" id="vit-range"></div></div></div>
+    <div class="charts" id="vitals"></div>
+  </section>
+
+  <section id="tab-records" hidden>
+    <div class="filter-panel">
+    <div class="controls">
+      <input type="search" id="rec-q" placeholder="Search notes, reports, messages, documents (all words must match)">
+      <select id="rec-src"></select>
+    </div>
+    <div class="controls chips" id="rec-topics"></div>
+    <div class="controls chips" id="rec-kinds"></div>
+    </div>
+    <div class="records-layout">
+      <div class="card results" id="rec-list"></div>
+      <div class="card reader" id="reader"><button class="chip back-results" id="back-results">← All results</button><div id="reader-content"><div class="empty">Select a record to read it.</div></div></div>
+    </div>
+  </section>
+</main>
+
+<script>/*__PLOTLY__*/</script>
+<script>
+"use strict";
+const DATA = /*__DATA__*/null;
+
+// ---------- helpers ----------
+const $ = (s, el = document) => el.querySelector(s);
+function h(tag, props, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k === "text") el.textContent = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null || kid === false) continue;
+    el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const toDate = d => d ? new Date(d.length > 10 ? d.replace(" ", "T") : d + "T00:00:00") : null;
+const fmtDate = d => d ? toDate(d).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "—";
+const fmtNum = v => v == null ? "" : String(+(+v).toPrecision(4));
+const year = d => d ? +d.slice(0, 4) : null;
+const store = {
+  get(k, dflt) { try { const v = localStorage.getItem("hp:" + k); return v == null ? dflt : JSON.parse(v); } catch { return dflt; } },
+  set(k, v) { try { localStorage.setItem("hp:" + k, JSON.stringify(v)); } catch {} },
+};
+const plotConfig = { displayModeBar: false, responsive: true };
+function baseLayout(extra) {
+  const L = {
+    paper_bgcolor: cssVar("--surface"), plot_bgcolor: cssVar("--surface"),
+    font: { family: 'system-ui, -apple-system, "Segoe UI", sans-serif', size: 12, color: cssVar("--ink-2") },
+    margin: { l: 52, r: 16, t: 10, b: 30 },
+    xaxis: { type: "date", gridcolor: cssVar("--grid"), linecolor: cssVar("--axis"), zeroline: false,
+             tickfont: { color: cssVar("--muted") }, showspikes: true, spikemode: "across", spikesnap: "cursor",
+             spikethickness: 1, spikecolor: cssVar("--axis"), spikedash: "solid" },
+    yaxis: { gridcolor: cssVar("--grid"), zeroline: false, tickfont: { color: cssVar("--muted") }, automargin: true },
+    hoverlabel: { bgcolor: cssVar("--surface"), bordercolor: cssVar("--border-solid"), font: { color: cssVar("--ink"), size: 12 } },
+    showlegend: false, hovermode: "closest", hoverdistance: 30, dragmode: "zoom",
+  };
+  for (const [k, v] of Object.entries(extra || {})) L[k] = (typeof v === "object" && !Array.isArray(v) && L[k]) ? Object.assign({}, L[k], v) : v;
+  return L;
+}
+function flagClass(f) { return f ? f.toLowerCase() : ""; }
+function flagLabel(f) { return !f ? "" : f === "High" ? "▲ High" : f === "Low" ? "▼ Low" : "● " + f; }
+function computedFlag(p) {
+  if (p.f) return p.f;
+  if (p.v == null) return null;
+  if (p.hi != null && p.v > p.hi) return "High";
+  if (p.lo != null && p.v < p.lo) return "Low";
+  return null;
+}
+function rangeText(p) {
+  if (p.lo != null && p.hi != null) return `${fmtNum(p.lo)}–${fmtNum(p.hi)}`;
+  if (p.hi != null) return `≤ ${fmtNum(p.hi)}`;
+  if (p.lo != null) return `≥ ${fmtNum(p.lo)}`;
+  return p.rt || "";
+}
+
+// ---------- color cues: fixed assignments, so one hue always means one thing ----------
+const KIND_COLOR = { note: "blue", report: "aqua", message: "orange", attachment: "yellow", document: "magenta", ccda: "violet", avs: "green", journal: "red" };
+const LANE_COLOR = { "Diagnoses": "red", "Symptoms": "magenta", "Treatments": "yellow", "Surgery & procedures": "orange", "Hospital & ED": "violet", "Imaging": "blue", "Pathology & reports": "aqua", "Milestones": "green" };
+const TOPIC_HUES = ["violet", "orange", "aqua", "yellow", "magenta", "green"];
+const TOPICS = DATA.topics || [];
+const topicColor = name => TOPIC_HUES[Math.max(0, TOPICS.findIndex(t => t.name === name)) % TOPIC_HUES.length];
+const srcColor = o => /BJC/i.test(o) ? "blue" : /SSM/i.test(o) ? "orange" : /Quest/i.test(o) ? "aqua" : /LabCorp/i.test(o) ? "yellow" : "violet";
+const col = hue => cssVar("--c-" + hue);
+const docTopics = new Map(), testTopics = new Map(), problemTopics = new Map();
+for (const t of TOPICS) {
+  for (const id of t.docs) (docTopics.get(id) || docTopics.set(id, []).get(id)).push(t.name);
+  for (const x of t.tests) (testTopics.get(x) || testTopics.set(x, []).get(x)).push(t.name);
+  for (const p of t.problems) (problemTopics.get(p) || problemTopics.set(p, []).get(p)).push(t.name);
+}
+const topicTags = names => (names || []).map(n => h("span", { class: "tag", style: `--tc: var(--c-${topicColor(n)})`, text: n }));
+const topicDots = names => names && names.length ? h("span", { class: "dots" }, names.map(n => h("i", { style: `background: var(--c-${topicColor(n)})`, title: n }))) : null;
+const srcPill = o => h("span", { class: "pill src", style: `--sc: var(--c-${srcColor(o)})`, text: o });
+
+// ---------- header, tabs ----------
+(function header() {
+  const p = DATA.patient || {};
+  const name = p.firstName ? p.firstName : "";
+  const dob = p.dateOfBirth || p.birthDate;
+  $("#who").textContent = [name, dob ? "DOB " + dob : ""].filter(Boolean).join(" · ");
+  const srcs = DATA.sources.map(s => s.short).join(" · ");
+  $("#built").textContent = `Built ${DATA.generated} from ${srcs}`;
+  const manage = $("#manage-sources");
+  if (window.parent !== window) {
+    manage.addEventListener("click", () => window.parent.postMessage({ type: "healthpilot:navigate", tab: "sources" }, "*"));
+  } else {
+    manage.textContent = "Sources: open desktop app";
+    manage.title = "Source imports and connections are managed in the Clippi-Health desktop app.";
+    manage.addEventListener("click", () => alert("Open the Clippi-Health desktop app and choose Sources to add or refresh data."));
+  }
+})();
+const rendered = {};
+function showTab(name) {
+  if (name !== "records") $(".records-layout").classList.remove("viewing-record");
+  for (const b of document.querySelectorAll("#tabs button")) b.setAttribute("aria-selected", b.dataset.tab === name);
+  for (const s of document.querySelectorAll("main > section")) s.hidden = s.id !== "tab-" + name;
+  if (!rendered[name]) { rendered[name] = true; ({ overview: renderOverview, labs: renderLabs, vitals: renderVitals, records: renderRecords })[name](); }
+  else window.dispatchEvent(new Event("resize"));
+  window.scrollTo(0, 0);
+  store.set("tab", name);
+}
+document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+// ---------- overview ----------
+function renderOverview() {
+  const today = new Date().toISOString().slice(0, 10);
+  const labYears = DATA.labs.filter(l => l.d && l.d <= today).map(l => year(l.d));
+  const docYears = DATA.docs.filter(d => d.d && d.d <= today).map(d => year(d.d));
+  const allYears = labYears.concat(docYears);
+  const tests = new Set(DATA.labs.map(l => l.t));
+  const notes = DATA.docs.filter(d => d.k === "note").length;
+  const pastVisits = DATA.encounters.filter(e => e.date && e.date <= new Date().toISOString().slice(0, 10)).length;
+  const tiles = [
+    ["Lab results", DATA.labs.length.toLocaleString(), `${tests.size} distinct tests`],
+    ["Years covered", allYears.length ? `${Math.min(...allYears)}–${Math.max(...allYears)}` : "—", "across all sources"],
+    ["Clinical notes", notes.toLocaleString(), `${DATA.docs.length.toLocaleString()} searchable records`],
+    ["Visits", pastVisits.toLocaleString(), "past encounters across sources"],
+  ];
+  const tileHues = ["blue", "aqua", "orange", "violet"];
+  $("#tiles").replaceChildren(...tiles.map(([l, v, n], i) => h("div", { class: "tile", style: `--tc: var(--c-${tileHues[i % 4]})` }, h("div", { class: "label", text: l }), h("div", { class: "value", text: v }), h("div", { class: "note", text: n }))));
+  drawFocus();
+  drawTimeline();
+
+  const probs = DATA.problems.filter(p => p.kind === "problem");
+  $("#problems").replaceChildren(probs.length ? h("table", null,
+    h("thead", null, h("tr", null, h("th", { text: "Problem" }), h("th", { text: "Noted" }), h("th", { text: "Source" }))),
+    h("tbody", null, probs.map(p => h("tr", null,
+      h("td", null, h("button", { class: "linkbtn", text: p.name, title: "Search records", onclick: () => searchRecords(p.name) }), " ", topicDots(problemTopics.get(p.name))),
+      h("td", { class: "num", text: p.noted ? fmtDate(p.noted) : "—" }), h("td", null, srcPill(p.o)))))) : h("div", { class: "empty", text: "None recorded" }));
+
+  const hist = DATA.problems.filter(p => p.kind === "medical_history");
+  const uniq = arr => [...new Map(arr.map(x => [x.name.toLowerCase(), x])).values()];
+  $("#history").replaceChildren(
+    h("div", { class: "sub", text: "Medical history" }),
+    h("ul", { class: "plain" }, uniq(hist).map(p => h("li", null, p.name, " ", h("span", { class: "pill", text: p.o })))),
+    h("div", { class: "sub", style: "margin-top:12px", text: "Surgical history" }),
+    h("ul", { class: "plain" }, uniq(DATA.procedures).map(p => h("li", null, p.name, p.date ? ` — ${fmtDate(p.date)}` : "", " ", h("span", { class: "pill", text: p.o })))));
+
+  $("#meds").replaceChildren(DATA.meds.length ? h("table", null,
+    h("thead", null, h("tr", null, h("th", { text: "Medication" }), h("th", { text: "Instructions" }), h("th", { text: "Source" }))),
+    h("tbody", null, DATA.meds.map(m => h("tr", null, h("td", { text: m.name }), h("td", { class: "muted", text: m.sig || "" }), h("td", null, h("span", { class: "pill", text: m.o })))))) : h("div", { class: "empty", text: "None recorded" }));
+
+  const imms = [...new Map(DATA.immunizations.map(i => [i.name + i.date, i])).values()];
+  $("#imm").replaceChildren(
+    h("div", { class: "sub", text: "Immunizations" }),
+    h("ul", { class: "plain" }, imms.map(i => h("li", null, i.name, " — ", i.date ? fmtDate(i.date) : "date not recorded", " ", h("span", { class: "pill", text: i.o })))),
+    h("div", { class: "sub", style: "margin-top:12px", text: "Allergies" }),
+    DATA.allergies.length ? h("ul", { class: "plain" }, DATA.allergies.map(a => h("li", null, a.name, a.reactions ? ` (${a.reactions})` : ""))) : h("div", { class: "muted", text: "No known allergies recorded" }));
+}
+
+function drawFocus() {
+  const box = $("#focus");
+  if (!TOPICS.length) { $("#focus-card").hidden = true; return; }
+  box.replaceChildren(...TOPICS.map(t => h("div", { class: "topic-card", style: `--tc: var(--c-${topicColor(t.name)})` },
+    h("div", { class: "row" }, h("b", { text: t.name }), h("span", { class: "status " + (t.status || ""), text: t.status || "" })),
+    t.framing ? h("div", { class: "muted", text: t.framing }) : null,
+    h("div", { class: "stats", text: `${t.docs.length} records · ${t.tests.length} tests · latest ${t.latest ? fmtDate(t.latest) : "—"}` }),
+    h("div", { class: "actions" },
+      h("button", { class: "chip", text: "Records", onclick: () => showRecordsFor(t.name) }),
+      h("button", { class: "chip", text: "Chart labs", onclick: () => showLabsFor(t.name) })))));
+}
+function showRecordsFor(name) {
+  $(".records-layout").classList.remove("viewing-record");
+  recState.topic = name; recState.kind = "all"; recState.q = ""; store.set("rectopic", name); store.set("reckind", "all");
+  if (rendered.records) { $("#rec-q").value = ""; drawRecTopics(); drawKinds(); drawResults(); }
+  showTab("records");
+}
+function showLabsFor(name) {
+  const t = TOPICS.find(x => x.name === name);
+  if (!t) return;
+  store.set("labsel", t.chart_tests); store.set("labtopic", name);
+  if (rendered.labs) labState.setSelected(t.chart_tests, name);
+  showTab("labs");
+}
+
+function drawTimeline() {
+  const lanes = DATA.lanes.filter(l => DATA.events.some(e => e.lane === l)).reverse();
+  const evs = DATA.events;
+  const el = $("#timeline");
+  if (!evs.length) { el.replaceChildren(h("div", { class: "empty", text: "No dated events yet." })); return; }
+  const trace = {
+    type: "scatter", mode: "markers", x: evs.map(e => e.date), y: evs.map(e => e.lane),
+    customdata: evs.map(e => [e.title, e.o || e.source || ""]),
+    hovertemplate: "<b>%{customdata[0]}</b><br>%{x|%b %d, %Y} · %{customdata[1]}<extra></extra>",
+    marker: { size: evs.map(e => e.curated ? 13 : 11), color: evs.map(e => col(LANE_COLOR[e.lane] || "blue")),
+              symbol: evs.map(e => e.curated ? "diamond" : "circle"), line: { width: 2, color: cssVar("--surface") } },
+  };
+  $("#timeline-legend").replaceChildren(...lanes.slice().reverse().map(l => h("span", null, h("i", { class: "sw", style: `background: var(--c-${LANE_COLOR[l] || "blue"})` }), l)), h("span", { class: "muted", text: "◆ = added by hand" }));
+  const narrow = matchMedia("(max-width: 600px)").matches;
+  const layout = baseLayout({
+    height: 70 + lanes.length * 46, margin: { l: narrow ? 95 : 150, r: 8, t: 10, b: 30 },
+    yaxis: { type: "category", categoryorder: "array", categoryarray: lanes, gridcolor: cssVar("--grid"), tickfont: { color: cssVar("--ink-2"), size: narrow ? 10 : 12 }, fixedrange: true },
+  });
+  Plotly.newPlot(el, [trace], layout, plotConfig);
+  el.on("plotly_click", ev => showEvent(evs[ev.points[0].pointIndex]));
+}
+
+function showEvent(e) {
+  const box = $("#event-detail");
+  const ids = JSON.parse(e.doc_ids || "[]");
+  const docs = ids.map(id => DATA.docs.find(d => d.id === id)).filter(Boolean);
+  box.replaceChildren(
+    h("div", { class: "t", text: e.title }),
+    h("div", { class: "muted" }, `${fmtDate(e.date)} · ${e.lane} · ${e.o || e.source || ""}`),
+    e.detail ? h("p", { text: e.detail }) : null,
+    docs.length ? h("div", null, "Linked records: ", docs.map((d, i) => [i ? ", " : "", h("button", { class: "linkbtn", text: d.ti, onclick: () => openDoc(d.id) })])) : null,
+    h("div", { style: "margin-top:6px" }, h("button", { class: "linkbtn", text: `Search all records for “${e.title}”`, onclick: () => searchRecords(e.title) })));
+  box.hidden = false;
+}
+
+// ---------- labs ----------
+const RANGES = [["All", null], ["10y", 10], ["5y", 5], ["2y", 2], ["1y", 1]];
+function rangeStart(yrs) { if (!yrs) return null; const d = new Date(); d.setFullYear(d.getFullYear() - yrs); return d.toISOString().slice(0, 10); }
+function segControl(el, key, onChange) {
+  let cur = store.get(key, "All");
+  const draw = () => el.replaceChildren(...RANGES.map(([label]) => h("button", { "aria-pressed": label === cur, text: label, onclick: () => { cur = label; store.set(key, cur); draw(); onChange(); } })));
+  draw();
+  return () => rangeStart(RANGES.find(r => r[0] === cur)[1]);
+}
+function revealPressed(el) {
+  requestAnimationFrame(() => {
+    const button = el.querySelector('button[aria-pressed="true"]');
+    if (!button || el.scrollWidth <= el.clientWidth) return;
+    const row = el.getBoundingClientRect(), item = button.getBoundingClientRect();
+    if (item.left < row.left || item.right > row.right) el.scrollLeft += item.left - row.left - 8;
+  });
+}
+
+let labState;
+function renderLabs() {
+  const byTest = new Map();
+  for (const l of DATA.labs) { if (!byTest.has(l.t)) byTest.set(l.t, []); byTest.get(l.t).push(l); }
+  const tests = [...byTest.entries()].map(([t, pts]) => {
+    const last = pts[pts.length - 1];
+    return { t, g: last.g, pts, n: pts.length, nNum: pts.filter(p => p.v != null).length, last };
+  });
+  const knownGroups = ["Diabetes", "Metabolic", "Liver", "Blood counts", "Lipids", "Thyroid & hormones", "Immunology", "Inflammation", "GI & pancreas", "Vitamins & minerals", "Urinalysis"];
+  const groupOrder = [...knownGroups, ...new Set(tests.map(t => t.g).filter(g => !knownGroups.includes(g) && g !== "Other")), "Other"];
+  const preferred = ["Hemoglobin A1c", "Glucose", "Creatinine", "ALT", "IgG", "Hemoglobin", "WBC", "Pancreatic elastase"];
+  let selected = store.get("labsel", null) || preferred.filter(t => byTest.has(t) && byTest.get(t).filter(p => p.v != null).length >= 2).slice(0, 4);
+  let labTopic = store.get("labtopic", null);
+  const startOf = segControl($("#lab-range"), "labrange", draw);
+  labState = { byTest, tests, get selected() { return selected; },
+    setSelected(list, topic) { selected = list.filter(t => byTest.has(t)); labTopic = topic || null; store.set("labsel", selected); store.set("labtopic", labTopic); drawTopics(); drawList(); draw(); } };
+  function drawTopics() {
+    $("#lab-topics").replaceChildren(TOPICS.length ? h("span", { class: "muted", text: "Chart a topic:" }) : null, ...TOPICS.map(t =>
+      h("button", { class: "chip topic", style: `--tc: var(--c-${topicColor(t.name)})`, "aria-pressed": labTopic === t.name, text: `${t.name} (${t.chart_tests.length})`, title: t.chart_tests.join(", "), onclick: () => labState.setSelected(t.chart_tests, t.name) })));
+    revealPressed($("#lab-topics"));
+  }
+
+  function drawList() {
+    const q = $("#test-filter").value.trim().toLowerCase();
+    const groups = groupOrder.map(g => [g, tests.filter(t => t.g === g && (!q || t.t.toLowerCase().includes(q))).sort((a, b) => b.nNum - a.nNum || a.t.localeCompare(b.t))]).filter(([, ts]) => ts.length);
+    $("#testlist").replaceChildren(...groups.flatMap(([g, ts]) => [h("h3", { text: g }), ...ts.map(t => {
+      const f = computedFlag(t.last);
+      return h("button", { class: "test" + (f ? " abn" : ""), "aria-pressed": selected.includes(t.t), onclick: () => toggle(t.t) },
+        h("span", { text: t.t }), h("span", { class: "n" }, topicDots(testTopics.get(t.t)), String(t.n)),
+        h("span", { class: "last" }, `${t.last.v != null ? (t.last.c || "") + fmtNum(t.last.v) : t.last.vt} ${t.last.u || ""} · ${fmtDate(t.last.d)} `, f ? h("span", { class: "flag " + flagClass(f), text: flagLabel(f) }) : null));
+    })]));
+  }
+  function toggle(t) {
+    selected = selected.includes(t) ? selected.filter(x => x !== t) : [t, ...selected];
+    labTopic = null; store.set("labtopic", null); drawTopics();
+    store.set("labsel", selected); drawList(); draw();
+  }
+  function draw() {
+    const box = $("#labcharts");
+    if (!selected.length) { box.replaceChildren(h("div", { class: "card empty", text: "Pick one or more tests on the left to chart them." })); return; }
+    const start = startOf();
+    const allPts = selected.flatMap(t => byTest.get(t) || []).filter(p => !start || p.d >= start);
+    const xr = allPts.length ? [start || allPts.reduce((m, p) => p.d < m ? p.d : m, allPts[0].d), new Date().toISOString().slice(0, 10)] : null;
+    box.replaceChildren(...selected.filter(t => byTest.has(t)).map(t => labCard(t, byTest.get(t), xr, start)));
+  }
+  $("#test-filter").addEventListener("input", drawList);
+  $("#lab-events").addEventListener("change", draw);
+  $("#lab-clear").addEventListener("click", () => { selected = []; labTopic = null; store.set("labsel", selected); store.set("labtopic", null); drawTopics(); drawList(); draw(); });
+  drawTopics(); drawList(); draw();
+}
+
+function eventMarkers(xr) {
+  if (!$("#lab-events").checked) return { shapes: [], annotations: [] };
+  const evs = DATA.events.filter(e => ["Diagnoses", "Treatments", "Surgery & procedures", "Milestones"].includes(e.lane) && (!xr || (e.date >= xr[0] && e.date <= xr[1])));
+  return {
+    shapes: evs.map(e => ({ type: "line", xref: "x", yref: "paper", x0: e.date, x1: e.date, y0: 0, y1: 1, line: { color: cssVar("--axis"), width: 1 } })),
+    annotations: evs.map(e => ({ x: e.date, y: 1, xref: "x", yref: "paper", yanchor: "bottom", text: "◆", showarrow: false, font: { size: 9, color: cssVar("--muted") }, hovertext: `${fmtDate(e.date)} — ${e.title} (${e.lane})`, hoverlabel: { bgcolor: cssVar("--surface"), font: { color: cssVar("--ink") } } })),
+  };
+}
+
+function refNote(pts) {
+  const ref = [...pts].reverse().find(p => p.v != null && (p.lo != null || p.hi != null));
+  if (!ref) return "";
+  if (ref.lo != null && ref.hi != null) return ` · gray band = reference range ${rangeText(ref)} (most recent)`;
+  return ` · gray line = reference limit ${rangeText(ref)} (most recent)`;
+}
+function labCard(test, allPts, xr, start) {
+  const pts = allPts.filter(p => !start || p.d >= start);
+  const num = pts.filter(p => p.v != null);
+  const units = [...new Set(num.map(p => p.u).filter(Boolean))];
+  const years = pts.length ? `${year(pts[0].d)}–${year(pts[pts.length - 1].d)}` : "";
+  const tnames = testTopics.get(test) || [];
+  const card = h("div", { class: "card" + (tnames.length ? " topic-edge" : ""), style: tnames.length ? `--tc: var(--c-${topicColor(tnames[0])})` : "" },
+    h("h2", null, `${test}${units.length === 1 ? ` (${units[0]})` : ""}`, " ", ...topicTags(tnames)),
+    h("p", { class: "sub", text: `${pts.length} result${pts.length === 1 ? "" : "s"} · ${years}${refNote(allPts)}${units.length > 1 ? " · mixed units: " + units.join(", ") : ""}` }));
+  if (num.length) {
+    const chart = h("div", { class: "chart" });
+    card.append(chart);
+    const ref = [...num].reverse().find(p => p.lo != null || p.hi != null);
+    const traces = [];
+    const flags = num.map(computedFlag);
+    traces.push({
+      type: "scatter", mode: num.length > 1 ? "lines+markers" : "markers", x: num.map(p => p.d), y: num.map(p => p.v),
+      line: { width: 2, color: cssVar("--series-1") },
+      marker: { size: flags.map(f => f ? 11 : 8), color: flags.map(f => f ? cssVar("--critical") : cssVar("--series-1")),
+                symbol: flags.map(f => f === "High" ? "triangle-up" : f === "Low" ? "triangle-down" : f ? "diamond" : "circle"),
+                line: { width: 2, color: cssVar("--surface") } },
+      customdata: num.map((p, i) => [`${p.c || ""}${fmtNum(p.v)} ${p.u || ""}`, flagLabel(flags[i]), rangeText(p) ? "ref " + rangeText(p) : "", p.o, p.on || ""]),
+      hovertemplate: "<b>%{customdata[0]}</b> %{customdata[1]}<br>%{x|%b %d, %Y}<br>%{customdata[2]}<br>%{customdata[3]} %{customdata[4]}<extra></extra>",
+    });
+    const ev = eventMarkers(xr);
+    const shapes = ev.shapes.slice();
+    if (ref && ref.lo != null && ref.hi != null) shapes.unshift({ type: "rect", xref: "paper", x0: 0, x1: 1, y0: ref.lo, y1: ref.hi, fillcolor: cssVar("--band"), line: { width: 0 }, layer: "below" });
+    else if (ref) { const y = ref.hi != null ? ref.hi : ref.lo; shapes.unshift({ type: "line", xref: "paper", x0: 0, x1: 1, y0: y, y1: y, line: { color: cssVar("--muted"), width: 1 }, layer: "below" }); }
+    requestAnimationFrame(() => Plotly.newPlot(chart, traces, baseLayout({ height: 240, margin: { l: matchMedia("(max-width: 600px)").matches ? 42 : 52, r: 8, t: 16, b: 30 }, xaxis: xr ? { range: xr } : {}, shapes, annotations: ev.annotations }), plotConfig));
+  } else {
+    card.append(h("p", { class: "muted", text: "Text results — shown in the table below, not charted." }));
+  }
+  card.append(h("details", { open: !num.length },
+    h("summary", { text: `Values (${pts.length})` }),
+    h("table", null,
+      h("thead", null, h("tr", null, h("th", { text: "Date" }), h("th", { class: "num", text: "Value" }), h("th", { text: "Units" }), h("th", { text: "Reference" }), h("th", { text: "Flag" }), h("th", { text: "Source" }))),
+      h("tbody", null, pts.slice().reverse().map(p => {
+        const f = computedFlag(p);
+        return h("tr", { title: p.cm || "", class: f ? "abn" : "" }, h("td", { text: fmtDate(p.d) }), h("td", { class: "num", text: p.v != null ? (p.c || "") + fmtNum(p.v) : p.vt }),
+          h("td", { text: p.u || "" }), h("td", { text: rangeText(p) }), h("td", null, f ? h("span", { class: "flag " + flagClass(f), text: flagLabel(f) }) : ""),
+          h("td", null, srcPill(p.o)));
+      })))));
+  return card;
+}
+
+// ---------- vitals ----------
+const VITAL_ORDER = ["CGM / meter glucose", "Glucose time in range 70–180", "Weight", "BP", "Resting heart rate", "HRV (SDNN)", "Blood oxygen", "Sleep", "Steps", "Insulin", "Carbs logged", "VO2 max", "Body fat"];
+function rolling(xs, ys, days) {
+  const out = [], win = [];
+  let sum = 0;
+  for (let i = 0; i < xs.length; i++) {
+    const t = toDate(xs[i]).getTime();
+    win.push([t, ys[i]]); sum += ys[i];
+    while (win.length && win[0][0] < t - days * 864e5) sum -= win.shift()[1];
+    out.push(+(sum / win.length).toFixed(2));
+  }
+  return out;
+}
+function renderVitals() {
+  const box = $("#vitals");
+  if (!DATA.vitals.length) { box.replaceChildren(h("div", { class: "card empty", text: "No Apple Health device data found. Drop an Apple Health export zip into raw/apple/ and rebuild." })); return; }
+  const by = new Map();
+  for (const r of DATA.vitals) { if (!by.has(r.metric)) by.set(r.metric, []); by.get(r.metric).push(r); }
+  const startOf = segControl($("#vit-range"), "vitrange", draw);
+  function draw() {
+    const start = startOf();
+    const xr = [start || DATA.vitals.reduce((m, r) => r.date < m ? r.date : m, "9999"), new Date().toISOString().slice(0, 10)];
+    const cards = [];
+    for (const key of VITAL_ORDER) {
+      if (key === "BP") {
+        const s = (by.get("BP systolic") || []).filter(r => !start || r.date >= start), d = (by.get("BP diastolic") || []).filter(r => !start || r.date >= start);
+        if (s.length) cards.push(vitalCard("Blood pressure", "mmHg", [["Systolic", s, "--series-1"], ["Diastolic", d, "--series-2"]], xr));
+        continue;
+      }
+      const rs = (by.get(key) || []).filter(r => !start || r.date >= start);
+      if (rs.length) cards.push(vitalCard(key, rs[0].unit, [[key, rs, "--series-1"]], xr, key === "CGM / meter glucose"));
+    }
+    box.replaceChildren(...(cards.length ? cards : [h("div", { class: "card empty", text: "No device data in this date range." })]));
+  }
+  draw();
+}
+function withGaps(rs, days) {
+  const out = [];
+  for (let i = 0; i < rs.length; i++) {
+    if (i && toDate(rs[i].date) - toDate(rs[i - 1].date) > days * 864e5) out.push({ date: rs[i - 1].date.slice(0, 10) + " 12:00", value: null, min: null, max: null });
+    out.push(rs[i]);
+  }
+  return out;
+}
+function vitalCard(title, unit, series, xr, minMax) {
+  const n = series[0][1].length;
+  const dense = n > 120;
+  const card = h("div", { class: "card" }, h("h2", { text: `${title} (${unit})` }),
+    h("p", { class: "sub", text: `${n.toLocaleString()} days with data · ${fmtDate(series[0][1][0].date)} – ${fmtDate(series[0][1][n - 1].date)}${dense ? " · thin line = daily, thick = 30-day average" : ""}${minMax ? " · wash = daily min–max" : ""}` }));
+  if (series.length > 1) card.append(h("div", { class: "legend" }, series.map(([name, , color]) => h("span", null, h("i", { style: `border-color:${cssVar(color)}` }), name))));
+  const chart = h("div", { class: "chart" });
+  card.append(chart);
+  const traces = [];
+  for (const [name, raw, color] of series) {
+    const rs = withGaps(raw, 14);
+    const x = rs.map(r => r.date), y = rs.map(r => r.value);
+    if (minMax) {  // one min–max wash per contiguous run, so the fill never spans a data gap
+      let seg = [];
+      const flush = () => {
+        if (seg.length) {
+          traces.push({ type: "scatter", mode: "lines", x: seg.map(r => r.date), y: seg.map(r => r.min), line: { width: 0 }, hoverinfo: "skip" });
+          traces.push({ type: "scatter", mode: "lines", x: seg.map(r => r.date), y: seg.map(r => r.max), line: { width: 0 }, fill: "tonexty", fillcolor: cssVar("--series-1-wash"), hoverinfo: "skip" });
+        }
+        seg = [];
+      };
+      for (const r of rs) { if (r.value == null) flush(); else seg.push(r); }
+      flush();
+    }
+    traces.push({ type: "scatter", mode: dense ? "lines" : "lines+markers", x, y, name,
+      line: { width: dense ? 1 : 2, color: cssVar(color) }, opacity: dense ? 0.4 : 1,
+      marker: { size: 7, color: cssVar(color), line: { width: 2, color: cssVar("--surface") } },
+      hovertemplate: `<b>%{y} ${unit}</b> ${series.length > 1 ? name : ""}<br>%{x|%b %d, %Y}<extra></extra>` });
+    const real = rs.filter(r => r.value != null);
+    const avg = rolling(real.map(r => r.date), real.map(r => r.value), 30);
+    let k = 0;
+    if (dense) traces.push({ type: "scatter", mode: "lines", x, y: rs.map(r => r.value == null ? null : avg[k++]), name: name + " (30-day avg)", line: { width: 2, color: cssVar(color) },
+      hovertemplate: `<b>%{y} ${unit}</b> 30-day avg<br>%{x|%b %d, %Y}<extra></extra>` });
+  }
+  requestAnimationFrame(() => Plotly.newPlot(chart, traces, baseLayout({ height: 220, xaxis: { range: xr } }), plotConfig));
+  return card;
+}
+
+// ---------- records ----------
+const KINDS = [["all", "All"], ["journal", "My journal"], ["note", "Clinical notes"], ["report", "Results & reports"], ["message", "Messages"], ["attachment", "Attachments"], ["document", "Documents"], ["ccda", "Health summaries"], ["avs", "Visit summaries"]];
+let recState = { q: "", kind: store.get("reckind", "all"), src: "all", topic: store.get("rectopic", null), current: null };
+function drawRecTopics() {
+  $("#rec-topics").replaceChildren(...(TOPICS.length ? [h("span", { class: "muted", text: "Topic:" }),
+    h("button", { class: "chip", "aria-pressed": !recState.topic, text: "Any", onclick: () => { recState.topic = null; store.set("rectopic", null); drawRecTopics(); drawResults(); } }),
+    ...TOPICS.map(t => h("button", { class: "chip topic", style: `--tc: var(--c-${topicColor(t.name)})`, "aria-pressed": recState.topic === t.name, text: `${t.name} ${t.docs.length}`, onclick: () => { recState.topic = t.name; store.set("rectopic", t.name); drawRecTopics(); drawResults(); } }))] : []));
+  revealPressed($("#rec-topics"));
+}
+function renderRecords() {
+  const srcSel = $("#rec-src");
+  srcSel.replaceChildren(h("option", { value: "all", text: "All sources" }), ...[...new Set(DATA.docs.map(d => d.o))].map(o => h("option", { value: o, text: o })));
+  srcSel.addEventListener("change", () => { recState.src = srcSel.value; drawResults(); });
+  $("#rec-q").addEventListener("input", e => { recState.q = e.target.value; drawResults(); });
+  $("#rec-q").value = recState.q;
+  drawRecTopics(); drawKinds(); drawResults();
+  if (recState.current) openDoc(recState.current);
+}
+function drawKinds() {
+  $("#rec-kinds").replaceChildren(...KINDS.flatMap(([k, label]) => {
+    const n = k === "all" ? DATA.docs.length : DATA.docs.filter(d => d.k === k).length;
+    return n ? [h("button", { class: "chip", style: k === "all" ? "" : `--kc: var(--c-${KIND_COLOR[k] || "blue"})`, "aria-pressed": recState.kind === k, onclick: () => { recState.kind = k; store.set("reckind", k); drawKinds(); drawResults(); } }, k === "all" ? null : h("i", { class: "sw" }), `${label} ${n}`)] : [];
+  }));
+  revealPressed($("#rec-kinds"));
+}
+function terms() { return recState.q.toLowerCase().split(/\s+/).filter(t => t.length > 1); }
+const TODAY = new Date().toISOString().slice(0, 10);
+function matchDocs() {
+  const ts = terms();
+  const hits = DATA.docs.filter(d => (recState.kind === "all" || d.k === recState.kind) && (recState.src === "all" || d.o === recState.src) &&
+    (!recState.topic || (docTopics.get(d.id) || []).includes(recState.topic)) &&
+    ts.every(t => (d.ti || "").toLowerCase().includes(t) || d.x.toLowerCase().includes(t)));
+  // newest first, but placeholders for scheduled visits (dated in the future) go last
+  return hits.filter(d => !d.d || d.d <= TODAY).concat(hits.filter(d => d.d && d.d > TODAY).reverse());
+}
+function snippet(text, ts) {
+  if (!ts.length) return text.slice(0, 160);
+  const low = text.toLowerCase();
+  const i = Math.max(0, low.indexOf(ts[0]));
+  return (i > 60 ? "…" : "") + text.slice(Math.max(0, i - 60), i + 140).replace(/\s+/g, " ");
+}
+function highlight(text, ts) {
+  if (!ts.length) return [document.createTextNode(text)];
+  const re = new RegExp("(" + ts.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "gi");
+  return text.split(re).map((part, i) => i % 2 ? h("mark", { text: part }) : document.createTextNode(part));
+}
+const KIND_LABEL = Object.fromEntries(KINDS);
+function drawResults() {
+  const docs = matchDocs();
+  const ts = terms();
+  const list = $("#rec-list");
+  list.replaceChildren(h("div", { class: "muted", style: "padding:4px 8px 8px", text: `${docs.length} record${docs.length === 1 ? "" : "s"}${docs.length > 300 ? " (showing 300 newest)" : ""}` }),
+    ...docs.slice(0, 300).map(d => h("button", { class: "result", style: `--kc: var(--c-${KIND_COLOR[d.k] || "blue"})`, "aria-current": recState.current === d.id, onclick: () => openDoc(d.id) },
+      h("div", { class: "row" }, h("span", { class: "kind", text: KIND_LABEL[d.k] || d.k }), h("b", { text: d.ti || "(untitled)" })),
+      h("div", { class: "meta" }, fmtDate(d.d), d.d && d.d > TODAY ? h("span", { class: "pill", text: "scheduled" }) : null, " · ", srcPill(d.o), d.a ? ` · ${d.a}` : ""),
+      docTopics.has(d.id) ? h("div", { class: "tags" }, ...topicTags(docTopics.get(d.id))) : null,
+      h("div", { class: "snip" }, highlight(snippet(d.x, ts), ts)))));
+}
+$("#back-results").addEventListener("click", () => {
+  $(".records-layout").classList.remove("viewing-record");
+  $("#rec-list").scrollIntoView({ block: "start" });
+});
+function openDoc(id) {
+  if (!rendered.records) { recState.current = id; showTab("records"); return; }
+  showTab("records");
+  recState.current = id;
+  const d = DATA.docs.find(x => x.id === id);
+  if (!d) return;
+  const ts = terms();
+  const enc = d.e ? DATA.encounters.find(e => e.id === d.e) : null;
+  $("#reader-content").replaceChildren(
+    h("div", { class: "row", style: `--kc: var(--c-${KIND_COLOR[d.k] || "blue"})` }, h("span", { class: "kind", text: KIND_LABEL[d.k] || d.k }), h("h2", { text: d.ti || "(untitled)" })),
+    h("div", { class: "muted" }, fmtDate(d.d), " · ", srcPill(d.o), d.a ? ` · ${d.a}` : "", d.dp ? ` · ${d.dp}` : "", enc ? ` · visit: ${enc.type}` : "", " ", ...topicTags(docTopics.get(d.id))),
+    ["file:", "hp:"].includes(location.protocol) && d.p && !d.p.includes("!") ? h("div", { style: "margin-top:6px" }, h("a", { href: d.p, target: "_blank", rel: "noopener", text: "Open original file" })) : null,
+    h("div", { class: "body" }, d.x ? highlight(d.x, ts) : h("span", { class: "muted", text: "No text extracted (image or scanned file) — open the original." })));
+  drawResults();
+  const reader = $("#reader"), first = $("#reader mark");
+  reader.scrollTop = first ? first.offsetTop - reader.offsetTop - reader.clientHeight / 3 : 0;
+  if (matchMedia("(max-width: 860px)").matches) {
+    $(".records-layout").classList.add("viewing-record");
+    requestAnimationFrame(() => reader.scrollIntoView({ block: "start" }));
+  }
+}
+function searchRecords(q) {
+  $(".records-layout").classList.remove("viewing-record");
+  recState.q = q; recState.kind = "all"; recState.topic = null; store.set("reckind", "all"); store.set("rectopic", null);
+  if (rendered.records) { $("#rec-q").value = q; drawRecTopics(); drawKinds(); drawResults(); }
+  showTab("records");
+}
+
+// ---------- boot ----------
+window.addEventListener("message", event => {
+  if (event.source !== window.parent || event.data?.type !== "healthpilot:theme") return;
+  const theme = event.data.theme;
+  if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+  else document.documentElement.removeAttribute("data-theme");
+  for (const k of Object.keys(rendered)) rendered[k] = false;
+  showTab(store.get("tab", "overview"));
+});
+showTab(store.get("tab", "overview"));
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { for (const k of Object.keys(rendered)) rendered[k] = false; showTab(store.get("tab", "overview")); });
+</script>
+</body>
+</html>

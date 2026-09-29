@@ -1,0 +1,447 @@
+#!/usr/bin/env python3
+"""hp — the Clippi-Health front door: get data in, rebuild, and query, with no SQL needed.
+
+Getting data in
+  ./hp doctor                           check prerequisites and the state of raw/, data/, dashboard
+  ./hp setup                            one-time: create the local data folders
+  ./hp add <file-or-folder …>           import an Apple Health export, a local email/document ZIP,
+                                        PDFs, HTML, or a C-CDA record folder, then rebuild
+  ./hp smart <arguments…>               connect directly with SMART-on-FHIR or import FHIR NDJSON
+  ./hp build                            rebuild data/, dashboard.html and the reference documents from raw/
+  ./hp open                             open dashboard.html in the default browser
+
+Querying
+  ./hp summary                          what is here: counts, coverage, sources
+  ./hp sources                          where each record set came from, export dates, known gaps
+  ./hp tests [filter]                   lab tests available (canonical name, group, n, first/last)
+  ./hp labs <test> [--since DATE]       one test's full series; name is matched case-insensitively (regex allowed)
+  ./hp search <words…> [--kind K] [--since DATE] [--limit N]
+                                        full-text search; all words must match; "quoted phrase" and prefix* work
+  ./hp show <id> [--full]               one record's text, metadata, file path and related records
+  ./hp timeline [--lane L] [--since DATE]
+  ./hp encounters [--dept D] [--since DATE]
+  ./hp problems | meds | vitals [metric] [--since DATE]
+  ./hp topic <name>                     the case-study section for a topic from topics.json
+  ./hp sql "<select …>"                 read-only SQL
+  ./hp schema                           the database schema (CREATE statements)
+  --json on any command prints JSON instead of text.
+
+Read data/DATA_DICTIONARY.md for what the tables mean. Nothing here interprets results.
+"""
+import argparse
+import json
+import re
+import shutil
+import sqlite3
+import subprocess
+import sys
+import zipfile
+from datetime import datetime
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+DB_PATH = ROOT / "data" / "health.db"
+RAW = ROOT / "raw"
+sys.path.insert(0, str(ROOT))
+import reports  # noqa: E402
+from archive_records import archive_kinds  # noqa: E402
+
+
+def connect():
+    if not DB_PATH.exists():
+        sys.exit("data/health.db not found — run: ./hp build")
+    return sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+
+
+def run(cmd, **kw):
+    """Run a subprocess, streaming its output; exit on failure."""
+    print("$ " + " ".join(str(c) for c in cmd), flush=True)
+    r = subprocess.run([str(c) for c in cmd], **kw)
+    if r.returncode:
+        sys.exit(f"command failed ({r.returncode})")
+    return r
+
+
+# ---------------------------------------------------------------------------
+# getting data in
+# ---------------------------------------------------------------------------
+
+
+def is_apple_export(p):
+    try:
+        with zipfile.ZipFile(p) as z:
+            return any(n.endswith("apple_health_export/export.xml") for n in z.namelist())
+    except (zipfile.BadZipFile, OSError):
+        return False
+
+
+def zip_member_names(p):
+    try:
+        with zipfile.ZipFile(p) as archive:
+            return archive.namelist()
+    except (zipfile.BadZipFile, OSError):
+        return None
+
+
+def cmd_add(_db, args):
+    (RAW / "apple").mkdir(parents=True, exist_ok=True)
+    (RAW / "imports").mkdir(parents=True, exist_ok=True)
+    (RAW / "other").mkdir(parents=True, exist_ok=True)
+    added = 0
+    for raw in args.paths:
+        p = Path(raw).expanduser().resolve()
+        if not p.exists():
+            print(f"skip: {p} does not exist")
+            continue
+        if p.is_file() and p.suffix.lower() == ".zip" and is_apple_export(p):
+            old = [z for z in (RAW / "apple").glob("*.zip") if z.resolve() != p]
+            if old and ask(f"Replace the existing Apple Health export ({', '.join(z.name for z in old)})?"):
+                prev = RAW / "_previous"
+                prev.mkdir(exist_ok=True)
+                for z in old:
+                    z.rename(prev / f"{z.stem}-{datetime.now():%Y%m%d-%H%M%S}.zip")
+            dest = RAW / "apple" / p.name
+            shutil.copy2(p, dest)
+            print(f"Apple Health export → {dest.relative_to(ROOT)}  (device-data parse runs once, ~30 s)")
+        elif p.is_file() and p.suffix.lower() == ".zip":
+            names = zip_member_names(p)
+            kinds = archive_kinds(names or [])
+            if kinds["supported"]:
+                dest = RAW / "imports" / p.name
+                shutil.copy2(p, dest)
+                print(f"local email/document archive → {dest.relative_to(ROOT)}  (parsed offline on rebuild)")
+                if kinds["outlook"]:
+                    print("  note: PST/OLM/MSG members are retained but cannot be parsed; MBOX, EML, and documents are supported")
+            elif kinds["outlook"]:
+                print(f"skip: {p} contains only PST/OLM/MSG files; export messages as EML files and ZIP that folder")
+                continue
+            elif names is not None:
+                print(f"skip: {p} has no supported email or document files")
+                continue
+            else:
+                print(f"skip: {p} is not a readable ZIP")
+                continue
+        elif p.is_dir():
+            dest = RAW / "other" / p.name
+            if dest.exists():
+                shutil.rmtree(dest)
+            shutil.copytree(p, dest)
+            kind = "C-CDA record download" if any("IHE_XDM" in x.parts for x in dest.rglob("*")) else "folder"
+            print(f"{kind} → {dest.relative_to(ROOT)}")
+        else:
+            dest = RAW / "other" / p.name
+            shutil.copy2(p, dest)
+            print(f"file → {dest.relative_to(ROOT)}")
+        added += 1
+    if added and not args.no_build:
+        cmd_build(None, args)
+
+
+def cmd_build(_db, _args):
+    run([sys.executable, ROOT / "healthpilot.py"], cwd=ROOT)
+
+
+def cmd_smart(_db, args):
+    run([sys.executable, ROOT / "smart_connect.py", *args.smart_args], cwd=ROOT)
+
+
+def cmd_open(_db, _args):
+    page = ROOT / "dashboard.html"
+    if not page.exists():
+        sys.exit("dashboard.html not built yet — run: ./hp build")
+    subprocess.run(["open", str(page)] if sys.platform == "darwin" else ["xdg-open", str(page)])
+    print(page)
+
+
+def cmd_setup(_db, args):
+    for d in ("raw/apple", "raw/imports", "raw/other", "raw/fhir", "data"):
+        (ROOT / d).mkdir(parents=True, exist_ok=True)
+    cmd_doctor(None, args)
+    print("\nNext: ./hp add ~/Downloads/export.zip")
+
+
+def cmd_doctor(_db, args):
+    checks = []
+    ok = lambda label, good, hint="": checks.append((label, good, hint))
+    v = sys.version_info
+    ok(f"python {v.major}.{v.minor}", v >= (3, 9), "needs Python 3.9+")
+    try:
+        sqlite3.connect(":memory:").execute("CREATE VIRTUAL TABLE t USING fts5(x)")
+        ok("sqlite with FTS5", True)
+    except sqlite3.OperationalError:
+        ok("sqlite with FTS5", False, "full-text search needs an FTS5-enabled SQLite (macOS system Python has it)")
+    ok("swift (PDF text extraction)", bool(shutil.which("swift")), "xcode-select --install")
+    fhir = list((RAW / "fhir").glob("*/healthpilot-source.json")) if (RAW / "fhir").exists() else []
+    if fhir:
+        ok(f"FHIR sources ({len(fhir)})", True)
+    zips = list((RAW / "apple").glob("*.zip")) if (RAW / "apple").exists() else []
+    ok("Apple Health export" + (f" ({zips[0].name}, {datetime.fromtimestamp(zips[0].stat().st_mtime):%Y-%m-%d})" if zips else ""), bool(zips),
+       "iPhone → Health → profile → Export All Health Data, then ./hp add <zip>")
+    if DB_PATH.exists():
+        built = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True).execute("SELECT value FROM meta WHERE key='built_at'").fetchone()
+        ok(f"data/health.db (built {built[0] if built else '?'})", True)
+    else:
+        ok("data/health.db", False, "./hp build")
+    ok("dashboard.html", (ROOT / "dashboard.html").exists(), "./hp build")
+    ok("data/DATA_DICTIONARY.md", (ROOT / "data" / "DATA_DICTIONARY.md").exists(), "./hp build")
+    if args.json:
+        print(json.dumps([{"check": c, "ok": g, "hint": h} for c, g, h in checks], indent=1))
+        return
+    for label, good, hint in checks:
+        print(f"  {'OK  ' if good else 'WARN'} {label}" + (f"  → {hint}" if not good and hint else ""))
+
+
+def cmd_schema(db, _args):
+    for (sql,) in db.execute("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY type DESC, name"):
+        print(sql + ";\n")
+
+
+def emit(rows, cols, args, headers=None):
+    if args.json:
+        print(json.dumps(rows, indent=1, default=str))
+        return
+    if not rows:
+        print("(no rows)")
+        return
+    headers = headers or cols
+    widths = [max(len(h), *(len(reports.esc(r.get(c))[:60]) for r in rows)) for h, c in zip(headers, cols)]
+    print("  ".join(h.ljust(w) for h, w in zip(headers, widths)))
+    for r in rows:
+        print("  ".join(reports.esc(r.get(c))[:60].ljust(w) for c, w in zip(cols, widths)))
+
+
+def cmd_summary(db, args):
+    n = lambda sql: db.execute(sql).fetchone()[0]
+    info = {
+        "patient": json.loads(reports.meta(db, "patient") or "{}"),
+        "built_at": reports.meta(db, "built_at"),
+        "labs": n("SELECT count(*) FROM labs_clean"), "distinct_tests": n("SELECT count(DISTINCT test) FROM labs_clean"),
+        "documents": {r[0]: r[1] for r in db.execute("SELECT kind, count(*) FROM documents GROUP BY kind ORDER BY 2 DESC")},
+        "encounters_past": n("SELECT count(*) FROM encounters WHERE date <= date('now')"),
+        "events": n("SELECT count(*) FROM events"), "vitals_days": n("SELECT count(DISTINCT date) FROM vitals_daily"),
+        "sources": reports.q(db, "SELECT key, org, exported_at, coverage_from, coverage_to FROM sources"),
+    }
+    if args.json:
+        print(json.dumps(info, indent=1))
+        return
+    p = info["patient"]
+    print(f"Clippi-Health — {p.get('firstName', '')} DOB {p.get('dateOfBirth') or p.get('birthDate', '')} · built {info['built_at']}")
+    print(f"labs: {info['labs']} results, {info['distinct_tests']} tests · documents: " +
+          ", ".join(f"{v} {k}" for k, v in info["documents"].items()))
+    print(f"encounters (past): {info['encounters_past']} · timeline events: {info['events']} · device-data days: {info['vitals_days']}")
+    for s in info["sources"]:
+        print(f"  {s['key']:6} {s['org']:<52} exported {s['exported_at']}  records {s['coverage_from']} → {s['coverage_to']}")
+    print("Reference: data/DATA_DICTIONARY.md · topics: " + ", ".join(reports.load_topics()))
+
+
+def cmd_sources(db, args):
+    rows = reports.q(db, "SELECT * FROM sources ORDER BY key")
+    if args.json:
+        print(json.dumps(rows, indent=1))
+        return
+    for s in rows:
+        print(f"== {s['key']} — {s['org']}\n   system:   {s['system']}\n   export:   {s['kind']} at {s['exported_at']} · {s['path']}"
+              f"\n   coverage: {s['coverage_from']} → {s['coverage_to']}\n   loaded:   {s['record_counts']}\n   method:   {s['method']}")
+        gaps = json.loads(s["gaps"] or "{}")
+        if gaps.get("needs_attention") or gaps.get("empty"):
+            print(f"   gaps:     {gaps.get('summary', '')} could not fetch: " + ", ".join(g["endpoint"] for g in gaps.get("needs_attention", []))
+                  + "; empty: " + ", ".join(gaps.get("empty", [])))
+        if s["notes"]:
+            print(f"   caveats:  {s['notes']}")
+
+
+def cmd_tests(db, args):
+    rows = reports.q(db, "SELECT test_group, test, count(*) n, min(date) first, max(date) last FROM labs_clean "
+                         "WHERE date IS NOT NULL GROUP BY test ORDER BY test_group, test")
+    if args.filter:
+        r = re.compile(args.filter, re.I)
+        rows = [x for x in rows if r.search(x["test"]) or r.search(x["test_group"])]
+    emit(rows, ["test_group", "test", "n", "first", "last"], args, ["group", "test", "n", "first", "last"])
+
+
+def cmd_labs(db, args):
+    r = re.compile(args.test, re.I)
+    tests = [t[0] for t in db.execute("SELECT DISTINCT test FROM labs_clean ORDER BY test") if r.search(t[0])]
+    exact = [t for t in tests if t.lower() == args.test.lower()]
+    tests = exact or tests
+    if not tests:
+        sys.exit(f"no test matches {args.test!r} — try: ./hp tests {args.test}")
+    out = []
+    for t in tests[:12]:
+        rows = [x for x in reports.lab_rows(db, t) if not args.since or x["date"] >= args.since]
+        if not rows:
+            continue
+        if args.json:
+            out.append({"test": t, "results": rows})
+            continue
+        print(f"== {t}  ({len(rows)} results)")
+        for x in rows:
+            print(f"  {x['date']}  {reports.value_str(x):<18} {reports.flag_str(x):<7} ref {reports.ref_str(x):<14} {reports.short_org(x['org'], x['source'])}")
+    if args.json:
+        print(json.dumps(out, indent=1, default=str))
+    if len(tests) > 12:
+        print(f"… {len(tests) - 12} more tests match; narrow the pattern")
+
+
+def fts_query(terms):
+    parts = []
+    for t in terms:
+        t = t.strip()
+        if not t:
+            continue
+        if t.endswith("*"):
+            parts.append('"' + t[:-1].replace('"', "") + '"*')
+        else:
+            parts.append('"' + t.replace('"', "") + '"')
+    return " AND ".join(parts)
+
+
+def cmd_search(db, args):
+    sql = ("SELECT d.id, d.date, d.kind, d.title, d.author, d.dept, snippet(documents_fts, 1, '[', ']', '…', 14) AS snippet "
+           "FROM documents_fts f JOIN documents d ON d.id = f.rowid WHERE documents_fts MATCH ?")
+    params = [fts_query(args.words)]
+    if args.kind:
+        sql += " AND d.kind = ?"
+        params.append(args.kind)
+    if args.since:
+        sql += " AND d.date >= ?"
+        params.append(args.since)
+    sql += " ORDER BY d.date DESC LIMIT ?"
+    params.append(args.limit)
+    try:
+        rows = reports.q(db, sql, *params)
+    except sqlite3.OperationalError as e:
+        sys.exit(f"search error: {e}")
+    if args.json:
+        print(json.dumps(rows, indent=1))
+        return
+    print(f"{len(rows)} record(s) for {' '.join(args.words)!r}" + (f" [{args.kind}]" if args.kind else ""))
+    for r in rows:
+        print(f"  #{r['id']:<4} {r['date']}  {r['kind']:<10} {r['title'][:40]:<40} {(r['author'] or '')[:24]}")
+        print(f"        {reports.esc(r['snippet'])[:200]}")
+
+
+def cmd_show(db, args):
+    d = reports.q(db, "SELECT * FROM documents WHERE id=?", args.id)
+    if not d:
+        sys.exit(f"no record #{args.id}")
+    d = d[0]
+    related = reports.q(db, "SELECT id, kind, date, title FROM documents WHERE (parent_id=? OR id=? OR (encounter_id IS NOT NULL AND encounter_id=?)) AND id<>? ORDER BY id",
+                        d["id"], d["parent_id"] or -1, d["encounter_id"] or -1, d["id"])
+    if args.json:
+        d["related"] = related
+        if not args.full:
+            d["text"] = d["text"][:6000]
+        print(json.dumps(d, indent=1))
+        return
+    print(f"#{d['id']}  {d['date']}  {d['kind']}  {d['title']}\n{d['author'] or ''}  {d['dept'] or ''}  {reports.short_org(d['org'], d['source'])}"
+          f"\nfile: {d['path']}  ({d['format']})\nprovenance: {d['provenance']}\n")
+    text = d["text"] or "(no text extracted — open the file)"
+    print(text if args.full or len(text) <= 6000 else text[:6000] + f"\n… [{len(text) - 6000} more characters; use --full]")
+    if related:
+        print("\nrelated: " + "; ".join(f"#{r['id']} {r['kind']} {r['title']}" for r in related[:12]))
+
+
+def cmd_timeline(db, args):
+    sql, params = "SELECT id, date, lane, title, detail, curated, doc_ids FROM events WHERE 1=1", []
+    if args.lane:
+        sql += " AND lane LIKE ?"
+        params.append(f"%{args.lane}%")
+    if args.since:
+        sql += " AND date >= ?"
+        params.append(args.since)
+    rows = reports.q(db, sql + " ORDER BY date", *params)
+    if args.json:
+        print(json.dumps(rows, indent=1))
+        return
+    for e in rows:
+        print(f"{e['date']}  {'◆' if e['curated'] else '·'} {e['lane'][:22]:<22} {e['title'][:70]}   docs {e['doc_ids']}")
+        if e["detail"]:
+            print(f"            {reports.esc(e['detail'])[:160]}")
+
+
+def cmd_encounters(db, args):
+    sql, params = "SELECT id, date, type, dept, provider, source FROM encounters WHERE 1=1", []
+    if args.dept:
+        sql += " AND dept LIKE ?"
+        params.append(f"%{args.dept}%")
+    if args.since:
+        sql += " AND date >= ?"
+        params.append(args.since)
+    rows = reports.q(db, sql + " ORDER BY date", *params)
+    for r in rows:
+        r["notes"] = db.execute("SELECT count(*) FROM documents WHERE encounter_id=? AND kind='note'", [r["id"]]).fetchone()[0]
+    emit(rows, ["id", "date", "type", "dept", "provider", "notes"], args)
+
+
+def cmd_problems(db, args):
+    emit(reports.q(db, "SELECT name, noted, kind, source FROM conditions ORDER BY kind, noted DESC"), ["name", "noted", "kind", "source"], args)
+
+
+def cmd_meds(db, args):
+    emit(reports.q(db, "SELECT name, sig, provider, source FROM medications ORDER BY name"), ["name", "sig", "provider", "source"], args)
+
+
+def cmd_vitals(db, args):
+    if not args.metric:
+        emit(reports.q(db, "SELECT metric, unit, count(*) days, min(date) first, max(date) last FROM vitals_daily GROUP BY metric ORDER BY metric"),
+             ["metric", "unit", "days", "first", "last"], args)
+        return
+    sql, params = "SELECT date, metric, value, min, max, n, unit FROM vitals_daily WHERE metric LIKE ?", [f"%{args.metric}%"]
+    if args.since:
+        sql += " AND date >= ?"
+        params.append(args.since)
+    emit(reports.q(db, sql + " ORDER BY metric, date", *params), ["date", "metric", "value", "min", "max", "n", "unit"], args)
+
+
+def cmd_topic(db, args):
+    topics = reports.load_topics()
+    match = [n for n in topics if n.lower() == args.name.lower()] or [n for n in topics if args.name.lower() in n.lower()]
+    if not match:
+        sys.exit(f"no topic {args.name!r}; topics: {', '.join(topics)}")
+    if args.json:
+        t = topics[match[0]]
+        print(json.dumps({"topic": match[0], "tests": reports.topic_tests(db, t),
+                          "docs": [{k: v for k, v in d.items() if k != "text"} for d in reports.topic_docs(db, t)]}, indent=1))
+        return
+    print(reports.topic_section(db, match[0], topics[match[0]], level="#"))
+
+
+def cmd_sql(db, args):
+    if not re.match(r"^\s*(select|with|explain)\b", args.query, re.I):
+        sys.exit("read-only: only SELECT / WITH queries")
+    emit_rows = reports.q(db, args.query)
+    emit(emit_rows, list(emit_rows[0].keys()) if emit_rows else [], args)
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="hp", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--json", action="store_true", help="JSON output")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("doctor"); p.set_defaults(fn=cmd_doctor, needs_db=False)
+    p = sub.add_parser("setup"); p.set_defaults(fn=cmd_setup, needs_db=False)
+    p = sub.add_parser("add"); p.add_argument("paths", nargs="+"); p.add_argument("--no-build", action="store_true"); p.set_defaults(fn=cmd_add, needs_db=False)
+    p = sub.add_parser("build"); p.set_defaults(fn=cmd_build, needs_db=False)
+    p = sub.add_parser("smart"); p.add_argument("smart_args", nargs=argparse.REMAINDER); p.set_defaults(fn=cmd_smart, needs_db=False)
+    p = sub.add_parser("open"); p.set_defaults(fn=cmd_open, needs_db=False)
+    sub.add_parser("schema").set_defaults(fn=cmd_schema)
+    sub.add_parser("summary").set_defaults(fn=cmd_summary)
+    sub.add_parser("sources").set_defaults(fn=cmd_sources)
+    p = sub.add_parser("tests"); p.add_argument("filter", nargs="?"); p.set_defaults(fn=cmd_tests)
+    p = sub.add_parser("labs"); p.add_argument("test"); p.add_argument("--since"); p.set_defaults(fn=cmd_labs)
+    p = sub.add_parser("search"); p.add_argument("words", nargs="+"); p.add_argument("--kind"); p.add_argument("--since")
+    p.add_argument("--limit", type=int, default=25); p.set_defaults(fn=cmd_search)
+    p = sub.add_parser("show"); p.add_argument("id", type=int); p.add_argument("--full", action="store_true"); p.set_defaults(fn=cmd_show)
+    p = sub.add_parser("timeline"); p.add_argument("--lane"); p.add_argument("--since"); p.set_defaults(fn=cmd_timeline)
+    p = sub.add_parser("encounters"); p.add_argument("--dept"); p.add_argument("--since"); p.set_defaults(fn=cmd_encounters)
+    sub.add_parser("problems").set_defaults(fn=cmd_problems)
+    sub.add_parser("meds").set_defaults(fn=cmd_meds)
+    p = sub.add_parser("vitals"); p.add_argument("metric", nargs="?"); p.add_argument("--since"); p.set_defaults(fn=cmd_vitals)
+    p = sub.add_parser("topic"); p.add_argument("name"); p.set_defaults(fn=cmd_topic)
+    p = sub.add_parser("sql"); p.add_argument("query"); p.set_defaults(fn=cmd_sql)
+    args = ap.parse_args()
+    args.fn(connect() if getattr(args, "needs_db", True) else None, args)
+
+
+if __name__ == "__main__":
+    main()

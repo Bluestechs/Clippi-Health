@@ -1,0 +1,31 @@
+{
+  "key": "fhir-bjc-mychart",
+  "name": "BJC HealthCare MyChart",
+  "org": "BJC HealthCare & Washington University",
+  "fhir_base": "https://epicproxy.et0965.epichosted.com/FHIRProxy/api/FHIR/R4",
+  "client_id": "",
+  "redirect_uri": "http://127.0.0.1:8765/oauth/callback",
+  "registration_url": "https://fhir.epic.com/Developer/Apps",
+  "registration_note": "Epic registration is free and self-service, but the app owner must supply business identity and data-use information, accept Epic's terms, and obtain Clippi-Health's own production public client ID.",
+  "registration_steps": [
+    "Create an Epic on FHIR developer account and register Clippi-Health for Patients, Incoming API, standalone OAuth, and FHIR R4.",
+    "Register the exact native-app callback http://127.0.0.1:8765/oauth/callback and the read-only patient APIs Clippi-Health uses.",
+    "Complete Epic's Data Use Questionnaire, test with the non-production client ID in the Epic sandbox, then mark the app Ready for Production.",
+    "Paste the production public client ID below and test against BJC MyChart. If BJC does not receive it automatically, ask BJC to activate that client ID."
+  ],
+  "portal_url": "https://www.mypatientchart.org/mychart/Authentication/Login",
+  "manual_help_url": "https://www.bjc.org/about/bjc-medical-group/medical-records-request",
+  "manual_export_steps": [
+    "Sign in to BJC HealthCare & Washington University MyChart.",
+    "Open Your Menu, then choose Document Center.",
+    "Choose the record option that best matches the information you want and submit the request.",
+    "When MyChart says the record is ready, download it to this computer. Keep the download as a ZIP when MyChart supplies one.",
+    "Return to Clippi-Health and choose the downloaded ZIP or record folder."
+  ],
+  "scopes": [
+    "openid",
+    "fhirUser",
+    "launch/patient",
+    "patient/*.rs"
+  ]
+}

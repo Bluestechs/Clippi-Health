@@ -1,0 +1,49 @@
+# Roadmap
+
+Clippi-Health is local-first. It will not operate or depend on a hosted Clippi-Health account, data relay, webhook receiver, connector aggregator, telemetry system, or remote medical-record database. Generated data is disposable and may be rebuilt when schemas change.
+
+## Direct connector experience
+
+- Polish the **Connect a health system** desktop flow with cancellation, richer progress, and provider-specific recovery guidance. The app owns the helper lifecycle; users never manage a daemon or terminal process.
+- Complete Epic production public-client registration for the bundled BJC HealthCare & Washington University endpoint profile, verify the end-to-end production flow, and ship the issued public client id in signed releases.
+- Add reviewed endpoint profiles and provider-specific manual download instructions to the signed local catalog.
+- Keep OAuth tokens in memory for one import and require a fresh login for later pulls.
+- Treat providers that require a confidential server-held secret as unsupported; guide those users to manual FHIR/C-CDA export.
+- Keep generic FHIR NDJSON and C-CDA import paths for sources without direct SMART support.
+
+## Cross-platform desktop
+
+- Run the builder, CLI, connector helper, and Electron app in CI on current macOS, Windows, and Linux.
+- Replace macOS-only PDFKit extraction with a bundled, portable extractor and keep OCR optional.
+- Normalize browser launching, loopback OAuth callbacks, paths, permissions, encodings, long paths, and process lifecycle across all three operating systems.
+- Remove assumptions about Homebrew, Xcode tools, Apple Health, and macOS LaunchAgents from the core workflow.
+
+## Installation for non-technical users
+
+- Package signed, notarized macOS `.dmg` and/or `.pkg` downloads.
+- Package a signed Windows installer and a straightforward Linux AppImage/Flatpak option.
+- Bundle the runtime, connector helper, and rebuild logic so installation does not require Python, Node, Docker, or a terminal.
+- Add first-run source connection, data-folder selection, update checks, repair, and uninstall behavior.
+
+## Android and non-Apple health data
+
+- Add a source-adapter interface that maps imported samples into the existing daily metric model while retaining raw provenance.
+- Support practical Android exports, prioritizing Health Connect-compatible exports and well-documented Google Fit/Samsung Health archives as their available formats permit.
+- Add source-specific duplicate handling so the same wearable or lab observation is not counted twice after cross-device imports.
+- Keep FHIR clinical records separate from consumer-device measurements while presenting both in one timeline.
+
+## Optional agent access through MCP
+
+- Ship a separate, opt-in local MCP server over the generated SQLite database.
+- Start with read-only, bounded tools for source listing, schema inspection, lab series, timeline queries, document search, and citation retrieval.
+- Avoid arbitrary SQL by default; offer an advanced read-only query tool with statement validation and row/size limits.
+- Make every tool return provenance and stable source identities so agents can cite the underlying record.
+- Add explicit enable/disable controls, loopback-only transport, local authentication, audit logs, and redaction/export controls.
+- Keep the MCP server absent or disabled in the default installation so installing Clippi-Health does not grant agent access.
+
+## Community readiness
+
+- Publish connector and importer fixtures containing synthetic data only.
+- Add a contributor guide, security policy, threat model, and issue templates.
+- Document the boundary between Apache-2.0 project code, third-party dependencies, and remote health systems selected by the user.
+- Design schemas around open standards and retain unsupported source data verbatim so community adapters can evolve without data loss.

@@ -1,0 +1,31 @@
+# PHI — never commit
+raw/
+email/
+data/
+*.db
+*.db-*
+dashboard.html
+.browser-profile/
+curated_events.csv
+case_study_notes.md
+topics.json
+.DS_Store
+__pycache__/
+*.tmp
+
+# app build output; smoke screenshots show the owner's dashboard
+app/node_modules/
+app/dist/
+app/test/.smoke/
+# one-page case orientation (PHI)
+README_first.md
+journal.md
+clinical_summary_draft.md
+clinical_summary_revised.md
+clinical_summary*.md
+gemini_review_*.md
+pathologist_review_*.md
+pathologist_review.md
+unresolved-questions.md
+redact.json
+redacted/

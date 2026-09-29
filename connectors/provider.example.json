@@ -1,0 +1,14 @@
+{
+  "key": "fhir-example",
+  "name": "Example Health",
+  "org": "Example Health",
+  "fhir_base": "https://fhir.example.test/r4",
+  "client_id": "public-client-id-issued-by-the-provider",
+  "redirect_uri": "http://127.0.0.1:8765/oauth/callback",
+  "scopes": [
+    "openid",
+    "fhirUser",
+    "launch/patient",
+    "patient/*.rs"
+  ]
+}

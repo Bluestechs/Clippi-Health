@@ -1,0 +1,31 @@
+{
+  "name": "clippi-health-app",
+  "productName": "Clippi-Health",
+  "license": "Apache-2.0",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local desktop front door for Clippi-Health: standards-based health-record import, rebuild, and dashboard",
+  "main": "dist/main.js",
+  "files": [
+    "dist/**",
+    "!dist/**/*.map"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node build.mjs && electron .",
+    "typecheck": "tsc --noEmit",
+    "smoke": "node build.mjs && electron . --smoke",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "electron": "^44.4.5",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.11"
+  },
+  "allowScripts": {
+    "electron@44.4.5": true,
+    "esbuild@0.25.12": true
+  }
+}
