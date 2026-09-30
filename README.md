@@ -64,7 +64,7 @@ Put `--json` before a command for machine-readable output. See generated `data/D
 
 Clippi-Health has no hosted service. Its connector helper runs only on the user's computer, opens the selected health system in the system browser, receives OAuth on loopback, and downloads FHIR directly to local storage. It uses public-client OAuth with PKCE, persists no token, and exits after the import.
 
-The signed local catalog includes a BJC HealthCare & Washington University MyChart endpoint profile. Direct connection becomes available after Clippi-Health receives an Epic production public client id; app-owner setup lives in the desktop **Sources** tab and a local override stays under ignored `raw/connectors/`. Providers that require a server-held client secret are intentionally unsupported.
+The signed local catalog includes a BJC HealthCare & Washington University MyChart endpoint profile, but no maintainer/shared public client ID. For direct access, **each Clippi-Health user completes their own Epic registration**, supplies the requested identity and data-use information, accepts Epic's terms, and saves their own production public client ID in **Sources → Your registration for direct connection**. The ID stays under ignored `raw/connectors/` in the selected local record store. Direct access remains unavailable until that store has an ID; saving one enables an attempt, not proof of Epic/BJC activation. A client ID identifies the registered app, not a patient account; sign in to MyChart separately. Per-user registration is this product's policy, not a universal SMART requirement for patients. Providers that require a server-held client secret are intentionally unsupported.
 
 The BJC profile also works immediately without app registration: **Sources** shows BJC's current **Your Menu → Document Center** instructions, opens BJC MyChart, and accepts the downloaded ZIP or record folder. MyChart IHE XDM ZIPs are parsed directly during the local rebuild, so they do not need to be unpacked first.
 
@@ -78,7 +78,7 @@ Developer commands:
 ./hp smart import patient-export.jsonl --source fhir-example --org "Example Health"
 ```
 
-The complete trust boundary and provider-profile format are documented in [`docs/CONNECTORS.md`](docs/CONNECTORS.md). The exact Epic owner checklist is in [`docs/EPIC_REGISTRATION.md`](docs/EPIC_REGISTRATION.md). Production provider registrations and installer work are tracked in [`ROADMAP.md`](ROADMAP.md).
+The complete trust boundary and provider-profile format are documented in [`docs/CONNECTORS.md`](docs/CONNECTORS.md). Your Epic registration checklist is in [`docs/EPIC_REGISTRATION.md`](docs/EPIC_REGISTRATION.md). Production provider activation must be verified for your registration; installer work is tracked in [`ROADMAP.md`](ROADMAP.md).
 
 ## Desktop app and installers
 

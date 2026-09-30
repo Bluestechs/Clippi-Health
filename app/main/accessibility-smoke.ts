@@ -130,7 +130,11 @@ export async function runAccessibilitySmoke(window: BrowserWindow, frame: WebFra
   process.stdout.write(`Accessible chart controls passed ${Object.keys(controls).length} checks.\n`);
 
   const evidence: unknown[] = [];
-  const save = async (name: string) => writeFileSync(join(outDir,name+'.png'),(await window.webContents.capturePage()).toPNG(),{flag:'wx',mode:0o600});
+  const save = async (name: string) => {
+    // CSS/layout queries can precede the compositor frame captured by capturePage.
+    await window.webContents.executeJavaScript('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+    writeFileSync(join(outDir,name+'.png'),(await window.webContents.capturePage()).toPNG(),{flag:'wx',mode:0o600});
+  };
   await frame.executeJavaScript('showTab("vitals");document.querySelector(".diabetes-dashboard").scrollIntoView({block:"start"})');
   await delay(150); await save('accessibility-chart-controls');
   for (const factor of [2,4]) {

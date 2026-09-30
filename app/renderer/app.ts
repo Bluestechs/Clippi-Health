@@ -237,11 +237,19 @@ async function renderSources(): Promise<void> {
   }));
 }
 
+let renderedConnectorCatalog: string | null = null;
+
 async function renderConnectors(): Promise<void> {
   const target = el("connector-list");
+  const root = state?.root, demo = state?.demo;
   const connectors = await window.hp.connectors();
+  if (state?.root !== root || state?.demo !== demo) return;
+  const catalog = JSON.stringify([root, demo, connectors]);
+  // A tab refresh must not remove the focused control, open details, or unsaved client ID.
+  if (catalog === renderedConnectorCatalog) return;
   if (!connectors.length) {
     target.textContent = "No health-system profiles were found. You can still import FHIR, C-CDA, Apple Health, and ordinary files below.";
+    renderedConnectorCatalog = catalog;
     return;
   }
   target.replaceChildren(...connectors.map((connector) => {
@@ -258,7 +266,7 @@ async function renderConnectors(): Promise<void> {
     identity.append(name, org);
     const status = document.createElement("span");
     status.className = `badge ${connector.ready ? "on" : ""}`;
-    status.textContent = connector.ready ? "Direct connection ready" : "Manual import available";
+    status.textContent = connector.ready ? "Your client ID saved" : "Manual import available";
     heading.append(identity, status);
     card.append(heading);
 
@@ -316,9 +324,9 @@ async function renderConnectors(): Promise<void> {
     directTitle.textContent = "Direct OAuth connection";
     const directNote = document.createElement("span");
     directNote.textContent = connector.ready
-      ? `Sign in on ${connector.name}'s page. Clippi-Health downloads FHIR to this computer and discards the token when it finishes.`
+      ? `Your public client ID is saved in this local record store; provider activation still needs to be confirmed. Sign in separately on ${connector.name}'s page; Clippi-Health downloads FHIR to this computer and discards the token when it finishes.`
       : connector.direct_note ?? (connector.direct_capable
-        ? "Waiting for a provider-issued public client ID. The manual download above works now."
+        ? "Save the public client ID from your provider registration in this local record store. The manual download above works without registration."
         : "This provider has not published the app-registration details needed for a safe local OAuth connection.");
     directText.append(directTitle, directNote);
     direct.append(directText);
@@ -344,11 +352,11 @@ async function renderConnectors(): Promise<void> {
     const setup = document.createElement("details");
     const setupTitle = document.createElement("summary");
     setupTitle.textContent = connector.direct_capable
-      ? (connector.ready ? "Direct connection settings" : "App-owner setup for direct connection")
+      ? (connector.ready ? "Your direct connection settings" : "Your registration for direct connection")
       : "Direct OAuth status";
     const setupNote = document.createElement("p");
     setupNote.className = "sub";
-    setupNote.textContent = connector.registration_note ?? "Enter the provider-issued public client ID.";
+    setupNote.textContent = connector.registration_note ?? "Enter the public client ID from your own provider registration. It identifies the registered app, not your patient account, and is saved only in this local record store.";
     const registrationSteps = document.createElement("ol");
     registrationSteps.className = "registration-steps";
     for (const value of connector.registration_steps ?? []) {
@@ -364,7 +372,7 @@ async function renderConnectors(): Promise<void> {
     } else if (connector.ready) {
       const clear = document.createElement("button");
       clear.className = "ghost";
-      clear.textContent = "Remove local client ID";
+      clear.textContent = "Remove your local client ID";
       clear.onclick = async () => {
         const result = await window.hp.clearConnector(connector.key);
         if (result.error) appendLog(result.error);
@@ -373,11 +381,11 @@ async function renderConnectors(): Promise<void> {
       setupActions.append(clear);
     } else {
       const input = document.createElement("input");
-      input.placeholder = "Provider-issued public client ID";
+      input.placeholder = "Your production public client ID";
       input.autocomplete = "off";
-      input.setAttribute("aria-label", "Provider-issued public client ID");
+      input.setAttribute("aria-label", "Your production public client ID");
       const save = document.createElement("button");
-      save.textContent = "Save client ID";
+      save.textContent = "Save your client ID locally";
       const error = document.createElement("span");
       error.className = "error";
       save.onclick = async () => {
@@ -393,7 +401,7 @@ async function renderConnectors(): Promise<void> {
     if (connector.registration_url) {
       const registration = document.createElement("button");
       registration.className = "ghost";
-      registration.textContent = connector.registration_label ?? "Open provider app registration";
+      registration.textContent = connector.registration_label ?? "Open your provider registration";
       registration.onclick = async () => {
         const error = await window.hp.openConnectorLink(connector.key, "registration");
         if (error) appendLog(error);
@@ -422,6 +430,7 @@ async function renderConnectors(): Promise<void> {
     }
     return card;
   }));
+  renderedConnectorCatalog = catalog;
 }
 
 function renderImportPlan(target: HTMLElement, plan: ImportPlan | null, label: string): void {

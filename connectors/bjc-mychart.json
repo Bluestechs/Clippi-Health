@@ -6,14 +6,14 @@
   "client_id": "",
   "redirect_uri": "http://127.0.0.1:8765/oauth/callback",
   "registration_url": "https://fhir.epic.com/Developer/Apps",
-  "registration_label": "Open Epic app registration",
+  "registration_label": "Open Epic for your registration",
   "registration_guide": "epic",
-  "registration_note": "Epic registration is free and self-service, but the app owner must supply business identity and data-use information, accept Epic's terms, and obtain Clippi-Health's own production public client ID.",
+  "registration_note": "For direct access in Clippi-Health, you register your own use of the app with Epic, supply the requested identity and data-use information, and accept Epic's terms. Save your production public client ID only in this local record store. It identifies your registered app, not your patient account; you sign in to MyChart separately. Clippi-Health does not supply a shared client ID.",
   "registration_steps": [
-    "Create an Epic on FHIR developer account and register Clippi-Health for Patients, Incoming API, standalone OAuth, and FHIR R4.",
+    "Create your Epic on FHIR developer account and register your use of Clippi-Health for Patients, Incoming API, standalone OAuth, and FHIR R4.",
     "Register the exact native-app callback http://127.0.0.1:8765/oauth/callback and the read-only patient APIs Clippi-Health uses.",
-    "Complete Epic's Data Use Questionnaire, test with the non-production client ID in the Epic sandbox, then mark the app Ready for Production.",
-    "Paste the production public client ID below and test against BJC MyChart. If BJC does not receive it automatically, ask BJC to activate that client ID."
+    "Provide accurate information for your registration, complete Epic's Data Use Questionnaire, follow the sandbox testing checklist, and accept Epic's terms before marking your app Ready for Production.",
+    "Paste your production public client ID below to save it locally, then test against BJC MyChart. Saving the ID does not prove activation. If BJC does not receive it automatically, ask BJC to activate your client ID."
   ],
   "portal_url": "https://www.mypatientchart.org/mychart/Authentication/Login",
   "portal_label": "Open BJC MyChart",
@@ -22,7 +22,7 @@
   "manual_title": "Import a one-time MyChart download",
   "manual_import_mode": "portal",
   "import_label": "Choose downloaded ZIP or folder…",
-  "direct_note": "Waiting for Clippi-Health's Epic production app registration. The manual MyChart download above works without an app registration.",
+  "direct_note": "Direct access is unavailable until you save your own Epic production public client ID in this local record store. The manual MyChart download above works without developer/app registration.",
   "manual_export_steps": [
     "Sign in to BJC HealthCare & Washington University MyChart.",
     "Open Your Menu, then choose Document Center.",

@@ -12,7 +12,8 @@ topics.json
 .DS_Store
 __pycache__/
 *.tmp
-
+# Local Apple signing credentials
+apple-dev-id-202609/
 # app build output; smoke screenshots show the owner's dashboard
 app/node_modules/
 app/dist/

@@ -11,7 +11,7 @@ Clippi-Health is local-first. It will not operate or depend on a hosted Clippi-H
 ## Direct connector experience
 
 - Polish the **Connect a health system** desktop flow with cancellation, richer progress, and provider-specific recovery guidance. The app owns the helper lifecycle; users never manage a daemon or terminal process.
-- Complete Epic production public-client registration for the bundled BJC HealthCare & Washington University endpoint profile, verify the end-to-end production flow, and ship the issued public client id in signed releases.
+- Support each user completing their own Epic public/native registration and entering their own production public client ID locally. Do not make direct BJC access depend on a shared maintainer registration or ship a shared production ID; validate provider activation and the complete connection for user-supplied registrations.
 - Submit Quest's official FHIR API request and contact Labcorp interoperability support for patient-facing FHIR endpoint and public-client onboarding details. Enable direct OAuth only after each provider supports PKCE, a loopback redirect, distributable client registration, and synthetic end-to-end testing. The app already includes verified Apple Health and PDF import instructions for both laboratories.
 - Add reviewed endpoint profiles and provider-specific manual download instructions to the signed local catalog.
 - Keep OAuth tokens in memory for one import and require a fresh login for later pulls.
@@ -32,8 +32,9 @@ Clippi-Health is local-first. It will not operate or depend on a hosted Clippi-H
 
 ## Installation for non-technical users
 
-- Add the Apple Developer ID certificate and notarization key to GitHub, then validate and publish the prepared signed `.dmg` release job.
-- Complete Microsoft Artifact Signing identity validation and repository OIDC setup, then validate the prepared signed Windows installer job.
+- Apple credentials are configured and signed/notarized Mac builds passed on both architectures. Validate the resulting DMGs on clean Apple Silicon and Intel machines, then publish a reviewed Mac beta independently of the Windows signing setup; see [release instructions](docs/RELEASING.md).
+- Prefer Microsoft Store MSIX for trusted Windows distribution; implement its packaging/update/certification path when account registration is available. Keep explicitly unsigned x64/ARM64 evaluation builds separate from that future release. No Azure signing account is configured.
+- Native Linux x64/ARM64 DEB and portable ZIP packages passed installed/extracted fictional smoke on Ubuntu 24.04. Complete fresh-machine and Debian ARM64 VM testing; older glibc compatibility and portable ZIP sandbox setup remain qualification boundaries.
 - Add a Linux AppImage or Flatpak alongside the existing `.deb` and ZIP packages if community demand justifies the extra format.
 - Add first-run source connection, data-folder selection, update checks, repair, and uninstall behavior.
 

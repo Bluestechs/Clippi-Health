@@ -1,22 +1,24 @@
-# Epic registration for the BJC MyChart connector
+# Your Epic registration for the BJC MyChart connector
 
-Direct MyChart access needs a client id issued specifically to Clippi-Health. Epic's registration is self-service and free for standards-based public APIs, but the app owner must create the account, provide business identity information, answer the patient-app Data Use Questionnaire, accept Epic's terms, and mark the app ready. Do not use a client id copied from another app.
+For direct MyChart access in Clippi-Health, **each app user registers their own use of the app with Epic and supplies their own production public client ID**. Clippi-Health does not provide a maintainer-owned or shared client ID. You create your Epic developer account, provide the identity and data-use information Epic requests, accept the terms yourself, and complete activation for your registration. Do not use an ID copied from another app or another user.
+
+This is Clippi-Health's product policy, not a claim that SMART on FHIR universally requires every patient to have a developer account. A public client ID identifies the registered app; it is not a patient identity, password, or client secret. You still sign in and consent separately on BJC MyChart for each import.
 
 The manual **MyChart download → Clippi-Health import** path does not require this registration.
 
 ## Information to prepare
 
 - App name: **Clippi-Health**. Do not put “Epic” in the product name.
-- Public documentation: the final HTTPS URL where the distributor publishes this project's `README.md`.
-- Data-use policy: the final HTTPS URL where the distributor publishes `PRIVACY.md`.
+- Public documentation: the project's published HTTPS documentation for the release you are using, or documentation you provide that accurately describes your registered use.
+- Data-use policy: the project's published `PRIVACY.md` as a description of Clippi-Health, plus any information Epic requests about your own registered use. Review it; do not claim a different operator's identity or data practices as your own.
 - A short product summary, product screenshot, and project thumbnail/logo.
-- The legal/business identity requested for an Epic on FHIR developer account: name, company email and name, country, and business address. Epic's current signup form also accepts a phone number and website.
+- Your own legal/business identity as requested by Epic's developer-account form. Supply accurate information and follow Epic's current eligibility and account requirements; do not enter the maintainer's identity.
 
-Review the public documentation and privacy policy before production registration so they describe the release that users will actually receive.
+Review the documentation, privacy policy, and Epic's current terms before registering. Your questionnaire answers must describe your actual use of this local-only app. An issued ID or a saved local configuration does not by itself establish that Epic or BJC has activated the registration.
 
 ## App configuration
 
-Create the app from [Epic on FHIR → Build Apps](https://fhir.epic.com/Developer/Apps) with these settings:
+Create your app registration from [Epic on FHIR → Build Apps](https://fhir.epic.com/Developer/Apps) with these settings:
 
 - Primary user / consumer type: **Patients**.
 - Direction: **Incoming API**.
@@ -33,16 +35,18 @@ If Epic offers automatic distribution for the chosen patient-facing USCDI APIs, 
 
 ## Register, test, and activate
 
-1. Create the app, save it, and mark it ready for Sandbox.
-2. Copy the **non-production** client id. Epic says changes can take up to an hour to reach its sandbox.
-3. Test the complete standalone flow against Epic's sandbox: login, consent, loopback callback, token exchange, FHIR reads, local import, rebuild, and token disposal.
-4. Complete the Data Use Questionnaire accurately. The answers are shown during patient authorization. Keep the requested APIs consistent with the data-use policy.
-5. Finalize the app details, accept Epic's terms, and mark it Ready for Production.
-6. Copy the **production** client id. Epic warns that most app-record details cannot be changed after this point; material technical changes require a new app record.
-7. In Clippi-Health, open **Sources → BJC HealthCare MyChart → App-owner setup**, paste the production public client id, and run a real BJC connection test.
-8. After a successful BJC test, put that same public production id in `connectors/bjc-mychart.json` for signed releases. A public client id identifies the app; it is not a client secret.
+1. Create your app registration, save it, and mark it ready for Sandbox.
+2. Copy your **non-production** client ID. Epic says changes can take up to an hour to reach its sandbox.
+3. Test the complete standalone flow against Epic's sandbox using its sandbox endpoint and non-production ID: login, consent, loopback callback, token exchange, FHIR reads, local import, rebuild, and token disposal. The bundled BJC endpoint is production, not the sandbox; do not use a sandbox ID there.
+4. Complete the Data Use Questionnaire accurately for your own registration. The answers are shown during patient authorization. Keep the requested APIs consistent with your data-use information.
+5. Finalize your app details, accept Epic's terms yourself, and mark your registration Ready for Production.
+6. Copy your **production** public client ID. Epic warns that most app-record details cannot be changed after this point; material technical changes require a new app record.
+7. In Clippi-Health, open **Sources → BJC HealthCare MyChart → Your registration for direct connection**, paste your production public client ID, and select **Save your client ID locally**. It is saved under `raw/connectors/` in the selected local record store, not in the app's bundled provider catalog or a hosted service. Never enter a client secret or token.
+8. Run a real BJC connection test by choosing **Connect**, then sign in and consent on BJC's page. Saving an ID enables an attempt; it does not verify production activation or record access. Keep your ID local—do not put it in `connectors/bjc-mychart.json`, commit it, or distribute it to other users.
 
-If BJC rejects a production client as unknown, first confirm the app is Ready for Production and qualifies for automatic distribution. If it does not, the remaining work is customer activation: provide BJC the production client id so the appropriate BJC/Epic administrator can request or sync its client record.
+To remove it, open **Your direct connection settings → Remove your local client ID**. Direct access becomes unavailable again; manual export stays available. Choosing a different record store uses that store's own configuration and does not carry your ID across.
+
+If BJC rejects your production client as unknown, first confirm your registration is Ready for Production and qualifies for automatic distribution. If it does not, provide BJC your production client ID so the appropriate BJC/Epic administrator can request or sync its client record. Actual activation and Epic's acceptance of this per-user registration approach must be confirmed for your registration; they are not guaranteed by Clippi-Health.
 
 ## Official references
 

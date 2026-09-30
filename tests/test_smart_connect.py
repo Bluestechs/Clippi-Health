@@ -112,23 +112,24 @@ class SmartConnectorTests(unittest.TestCase):
             combined = output.read_text() + (output.parent / "healthpilot-source.json").read_text()
             self.assertNotIn("access_token", combined)
 
-    def test_local_client_id_configuration_merges_with_bundled_profile(self):
+    def test_direct_access_requires_this_stores_client_id(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             catalog = root / "connectors"
             local = root / "raw" / "connectors"
             catalog.mkdir(parents=True)
-            bundled = raw_profile(client_id="")
+            bundled = raw_profile(client_id="shared-catalog-id")
             catalog.joinpath("example.json").write_text(json.dumps(bundled))
             with patch.multiple(smart_connect, CONNECTORS=catalog, LOCAL_CONNECTORS=local):
                 self.assertFalse(smart_connect.load_profile("fhir-example")["ready"])
-                saved = smart_connect.configure_profile("fhir-example", "public-production-id")
-                self.assertTrue(saved.is_file())
+                self.assertEqual(smart_connect.load_profile("fhir-example")["client_id"], "")
+                smart_connect.configure_profile("fhir-example", "public-production-id")
                 configured = smart_connect.load_profile("fhir-example")
                 self.assertTrue(configured["ready"])
                 self.assertEqual(configured["client_id"], "public-production-id")
                 smart_connect.clear_profile_configuration("fhir-example")
                 self.assertFalse(smart_connect.load_profile("fhir-example")["ready"])
+                self.assertEqual(smart_connect.load_profile("fhir-example")["client_id"], "")
 
 
 if __name__ == "__main__":

@@ -150,7 +150,8 @@ def load_profiles():
     unknown = sorted(set(overrides) - known)
     if unknown:
         raise ValueError("local connector override has unknown key: " + ", ".join(unknown))
-    profiles = [validate_profile(dict(profile, client_id=overrides.get(profile["key"], profile["client_id"])),
+    # Client IDs belong to the selected local store, never to the bundled catalog.
+    profiles = [validate_profile(dict(profile, client_id=overrides.get(profile["key"], "")),
                                  require_client_id=False) for profile in profiles]
     return profiles
 
@@ -428,7 +429,7 @@ def cmd_connect(args):
     if not profile:
         raise SystemExit(f"unknown connector {args.key!r}; run: ./hp smart list")
     if not profile["ready"]:
-        raise SystemExit(f"{profile['name']} needs Clippi-Health's public client ID; configure it in the Sources tab")
+        raise SystemExit(f"{profile['name']} needs your public client ID in this local store; configure it in the Sources tab")
     connect(profile, open_browser=not args.no_browser)
     if not args.no_build:
         subprocess.run([sys.executable, ROOT / "healthpilot.py"], cwd=ROOT, check=True)
