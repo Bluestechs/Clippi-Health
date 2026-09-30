@@ -76,6 +76,8 @@ Linux x64/ARM64 produces `.deb` and portable ZIP packages on native Ubuntu 24.04
 
 Ubuntu 24.04 is the verified Linux build/run environment. Older glibc releases and Debian VM compatibility remain unverified. A successful build is not clean-machine, screen-reader, GPU, update, or uninstall acceptance. No Python/Node development tools are required by packaged users.
 
+The attached Windows/Linux refresh passed all four native jobs in [run 36791002050](https://github.com/bennydogg/clippi-health/actions/runs/36791002050) from `07b38c7`. Actual installed/extracted apps passed the unchanged fictional UI gate, including 73 visual samples per smoke. The Linux refresh uses `-r2` filenames; superseded Linux assets were removed only after new upload digests matched local SHA-256 values. The draft contains nine installer/ZIP assets plus `SHA256SUMS`, covering those exact files. Original signed Mac DMGs remain at `efa6daa` and do not contain the later per-user registration, formatted-guide, reflow, or focus fixes. Release notes preserve that source distinction.
+
 ## Production release
 
 1. Update `app/package.json` to the intended version and commit the result on `main`.
