@@ -8,7 +8,7 @@ An Apple Development identity is suitable for development but not distribution o
 
 1. In the Apple Developer account, create a Developer ID Application certificate. Apple restricts creation of Developer ID certificates to the Account Holder role.
 2. Install the certificate and its private key in Keychain Access, export both as a password-protected `.p12`, and base64-encode the file.
-3. In App Store Connect, create an API key allowed to submit notarization requests. Download the `.p8` once and base64-encode it.
+3. In App Store Connect → Users and Access → Integrations → App Store Connect API → **Team Keys**, create a team API key for notarization. The Account Holder may first need to request API access. Download the `.p8` once and base64-encode it. Individual API keys cannot be used with `notarytool`.
 4. Add these GitHub Actions secrets:
 
    | Secret | Value |
@@ -22,7 +22,7 @@ An Apple Development identity is suitable for development but not distribution o
 
 The workflow imports the certificate into an ephemeral keychain, signs and notarizes the app, notarizes and staples the DMG, validates both, and discards the runner.
 
-Apple references: [create Developer ID certificates](https://developer.apple.com/help/account/certificates/create-developer-id-certificates/) and [customize the notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow/).
+Apple references: [create Developer ID certificates](https://developer.apple.com/help/account/certificates/create-developer-id-certificates/), [create a CSR in Keychain Access](https://developer.apple.com/help/account/certificates/create-a-certificate-signing-request/), [create an App Store Connect team key](https://developer.apple.com/help/app-store-connect/get-started/app-store-connect-api/), and [customize the notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow/).
 
 ## Microsoft setup
 
@@ -51,6 +51,12 @@ Microsoft Artifact Signing is the least burdensome current route to a publicly t
 The workflow uses GitHub OIDC, so no long-lived Azure client secret is stored. It signs previously unsigned application binaries before Squirrel packages them, then signs and verifies the final Setup executable.
 
 Microsoft references: [Artifact Signing quickstart](https://learn.microsoft.com/azure/artifact-signing/quickstart), [GitHub OIDC authentication](https://github.com/Azure/artifact-signing-action/blob/main/docs/authentication.md), and the [official Artifact Signing action](https://github.com/Azure/artifact-signing-action).
+
+## Signed macOS beta builds
+
+Once the six Apple secrets above are configured, run **Actions → Signed macOS builds → Run workflow** on `main`. This builds Apple Silicon and Intel apps, signs them with Developer ID, notarizes and staples the DMGs, verifies the app signatures, and uploads the results as workflow artifacts. It does not require Microsoft credentials, create a GitHub release, or upload any health records. Install the downloaded DMG on a clean Mac to check Gatekeeper, launch, source selection, import, rebuild, dashboard, and uninstall before offering it to testers.
+
+The separate `Signed release` tag workflow reuses this same macOS job and still waits for Windows and Linux release gates. Do not push a version tag just to test Apple signing. If the Apple build fails, inspect its signing/notarization diagnostics before making a public release.
 
 ## Evaluation builds
 

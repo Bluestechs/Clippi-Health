@@ -89,7 +89,7 @@ npm start
 
 Release builds bundle the Python record engine, portable PDF extraction, connector catalog, and dashboard assets. An installed app therefore does not require Python, Node, Git, or a terminal. It creates a private local record store on first launch; the user manages sources from the app.
 
-The repository can currently produce `.dmg`, Windows Squirrel, `.deb`, and ZIP artifacts through the manual **Installer builds** workflow. Those artifacts are for clean-machine evaluation because they are not publisher-signed. The **Signed release** workflow fails closed unless Apple notarization and Microsoft Artifact Signing are configured, then creates a draft GitHub release for final review. See [`app/README.md`](app/README.md) and [`docs/RELEASING.md`](docs/RELEASING.md).
+The repository can produce `.dmg`, Windows Squirrel, `.deb`, and ZIP evaluation artifacts through **Installer builds**. After Apple credentials are configured, **Signed macOS builds** can independently produce Developer ID signed and notarized Mac artifacts for tester review. The full **Signed release** workflow still waits for Apple notarization and Microsoft Artifact Signing before creating a draft GitHub release. See [`app/README.md`](app/README.md) and [`docs/RELEASING.md`](docs/RELEASING.md).
 
 Before publishing a source archive or desktop package, follow [`DISTRIBUTION.md`](DISTRIBUTION.md) and run `python3 scripts/audit_distribution.py`. Never ZIP a working data folder: ignored source records and generated outputs can still be present on disk.
 
