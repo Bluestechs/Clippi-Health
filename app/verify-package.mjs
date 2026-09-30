@@ -43,6 +43,7 @@ checkArchitecture(executable);
 checkArchitecture(join(runtime, process.platform === "win32" ? "clippi-runtime.exe" : "clippi-runtime"));
 if (process.platform === "win32") checkArchitecture(join(runtime, "_internal", "python312.dll"));
 run(process.execPath, [fileURLToPath(new URL("verify-runtime.mjs", import.meta.url)), runtime]);
-if (process.platform === "linux") run("xvfb-run", ["-a", executable, "--smoke"]);
+// Xvfb has no hardware GPU; keep software rendering confined to the evaluation command.
+if (process.platform === "linux") run("xvfb-run", ["-a", executable, "--disable-gpu", "--smoke"]);
 else run(executable, ["--smoke"]);
 console.log(`Packaged ${process.platform}/${process.arch} application passed native-engine and fictional desktop smoke checks.`);

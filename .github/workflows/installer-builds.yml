@@ -58,6 +58,10 @@ jobs:
           architecture: ${{ matrix.arch }}
           cache: npm
           cache-dependency-path: app/package-lock.json
+      - name: Configure isolated smoke temporary directory
+        shell: bash
+        run: |
+          printf 'TMPDIR=%s\nTMP=%s\nTEMP=%s\n' "$RUNNER_TEMP" "$RUNNER_TEMP" "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Verify native build tools
         shell: bash
         env:
@@ -89,7 +93,7 @@ jobs:
           $zip = Get-Item "out/make/zip/win32/${{ matrix.arch }}/*.zip"
           $destination = Join-Path $env:RUNNER_TEMP "clippi-evaluation"
           Expand-Archive -LiteralPath $zip.FullName -DestinationPath $destination
-          $application = Join-Path $destination "Clippi-Health-win32-${{ matrix.arch }}"
+          $application = $destination
           $signature = Get-AuthenticodeSignature (Join-Path $application "Clippi-Health.exe")
           if ($signature.Status -ne 'NotSigned') { throw "Unexpected evaluation signature: $($signature.Status)" }
           node verify-package.mjs $application
@@ -137,5 +141,13 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: app/out/make/**
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload fictional desktop smoke evidence
+        if: runner.os != 'macOS'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.artifact }}-smoke
+          path: ${{ runner.temp }}/clippi-health-smoke-*/*.png
           if-no-files-found: error
           retention-days: 7
