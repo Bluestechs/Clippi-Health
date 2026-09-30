@@ -29,6 +29,23 @@ const layoutProbe = `(() => {
     tiny: tiny.map(el => el.id || el.className), clipped: clipped.map(el => el.id || el.className) };
 })()`;
 
+const focusProbe = `(() => {
+  const el=document.activeElement,r=el.getBoundingClientRect(),style=getComputedStyle(el);
+  const identify=node => node ? {tag:node.tagName,id:node.id,role:node.getAttribute("role")} : null;
+  const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+  const ancestors=[];
+  for(let parent=el;parent;parent=parent.parentElement) {
+    const s=getComputedStyle(parent);
+    ancestors.push({...identify(parent),scrollTop:parent.scrollTop,scrollLeft:parent.scrollLeft,
+      scrollHeight:parent.scrollHeight,clientHeight:parent.clientHeight,overflowY:s.overflowY});
+  }
+  return {visible:style.outlineStyle!=="none" && parseFloat(style.outlineWidth)>=2,
+    unobscured:el===hit || el.contains(hit),inViewport:r.top>=0 && r.bottom<=innerHeight,
+    element:identify(el),hit:identify(hit),rect:r.toJSON(),viewport:{width:innerWidth,height:innerHeight},
+    scroll:{x:scrollX,y:scrollY},documentFocused:document.hasFocus(),focusVisible:el.matches(":focus-visible"),
+    outline:{style:style.outlineStyle,width:style.outlineWidth,offset:style.outlineOffset},ancestors};
+})()`;
+
 // Composite rendered backgrounds rather than comparing token names alone.
 const contrastProbe = `(() => {
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1;
@@ -188,16 +205,16 @@ export async function runAccessibilitySmoke(window: BrowserWindow, frame: WebFra
   const longSource=await window.webContents.executeJavaScript(layoutProbe);evidence.push({longSource});
   if(!longSource.reflow || !longSource.unclippedControls) throw new Error('Long source reflow: '+JSON.stringify(longSource));
   await window.webContents.executeJavaScript('document.getElementById("long-source-fixture").remove();document.querySelector("#tabs [aria-selected=true]").focus()');
+  const beforeFocus=await window.webContents.executeJavaScript(focusProbe);
+  process.stdout.write('400% focus before desktop focus: '+JSON.stringify({windowFocused:window.isFocused(),webContentsFocused:window.webContents.isFocused(),...beforeFocus})+'\n');
   window.focus(); window.webContents.focus();
+  const beforeTab=await window.webContents.executeJavaScript(focusProbe);
+  process.stdout.write('400% focus before Tab: '+JSON.stringify({windowFocused:window.isFocused(),webContentsFocused:window.webContents.isFocused(),...beforeTab})+'\n');
   window.webContents.sendInputEvent({type:'keyDown',keyCode:'Tab'});window.webContents.sendInputEvent({type:'keyUp',keyCode:'Tab'});await delay(150);
-  const focus=await window.webContents.executeJavaScript(`(() => {
-    const el=document.activeElement,r=el.getBoundingClientRect(),style=getComputedStyle(el);
-    const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
-    return {visible:style.outlineStyle!=='none' && parseFloat(style.outlineWidth)>=2,
-      unobscured:el===hit || el.contains(hit),inViewport:r.top>=0 && r.bottom<=innerHeight};
-  })()`);
+  const focus=await window.webContents.executeJavaScript(focusProbe);
+  process.stdout.write('400% focus after Tab: '+JSON.stringify({windowFocused:window.isFocused(),webContentsFocused:window.webContents.isFocused(),...focus})+'\n');
   evidence.push({keyboardFocusAt400:focus});
-  if(!Object.values(focus).every(Boolean)) throw new Error('400% keyboard focus: '+JSON.stringify(focus));
+  if(!focus.visible || !focus.unobscured || !focus.inViewport) throw new Error('400% keyboard focus: '+JSON.stringify(focus));
   await save('accessibility-focus-400');window.webContents.setZoomFactor(1);
   process.stdout.write("Long labels and 400% focus passed; measuring rendered contrast.\n");
   for(const theme of ['light','dark','system']) {
