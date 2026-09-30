@@ -1,7 +1,7 @@
 // Every renderer request, in one place. Handlers return plain data; long-running work streams lines
 // to the window on the "log" channel.
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { doctor } from "./doctor";
 import { applyImport, planImport, type ImportPlan } from "./importer";
@@ -231,22 +231,20 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   });
 
   handle("connectors:open-guide", async () => {
-    const guide = app.isPackaged
-      ? join(process.resourcesPath, "clippi-runtime", "_internal", "docs", "EPIC_REGISTRATION.md")
-      : join(dirname(paths().smartConnector), "docs", "EPIC_REGISTRATION.md");
+    const guide = join(app.getAppPath(), "dist", "epic-registration.html");
     if (!existsSync(guide)) return "The Epic registration checklist was not found.";
-    // Show bundled text in a sandboxed local window; no Markdown file association is needed.
-    const text = readFileSync(guide, "utf8").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const window = new BrowserWindow({
       title: "Your Epic registration · Clippi-Health",
       width: 900, height: 760, minWidth: 360, minHeight: 300,
       parent: getWindow() ?? undefined,
       webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false },
     });
-    window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
-    window.webContents.on("will-navigate", (event) => event.preventDefault());
-    const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><title>Your Epic registration · Clippi-Health</title><style>body{margin:0;padding:24px;background:#f9f9f7;color:#242424}pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:16px/1.6 system-ui,sans-serif}</style></head><body><main aria-label="Epic registration checklist"><pre>${text}</pre></main></body></html>`;
-    await window.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html));
+    const openReference = (url: string) => {
+      if (new URL(url).protocol === "https:") void shell.openExternal(url);
+    };
+    window.webContents.setWindowOpenHandler(({ url }) => { openReference(url); return { action: "deny" }; });
+    window.webContents.on("will-navigate", (event, url) => { event.preventDefault(); openReference(url); });
+    await window.loadFile(guide);
     return null;
   });
 

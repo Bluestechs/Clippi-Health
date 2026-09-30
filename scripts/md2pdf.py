@@ -42,8 +42,8 @@ strong { font-weight: 650; }
 """
 
 
-def inline(text):
-    """Escape HTML, then apply inline Markdown (code, bold, italics, links)."""
+def inline(text, *, render_links=False):
+    """Escape HTML and format inline Markdown; interactive documents can keep HTTPS links."""
     codes = []
 
     def keep(m):
@@ -51,7 +51,13 @@ def inline(text):
         return f"\0{len(codes) - 1}\0"
     text = re.sub(r"`([^`]+)`", keep, text)
     text = html.escape(text, quote=False)
-    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    def link(match):
+        label, target = match.group(1), html.unescape(match.group(2))
+        if render_links and target.startswith("https://"):
+            return f'<a href="{html.escape(target, quote=True)}">{label}</a>'
+        return label
+
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", link, text)
     text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
     text = re.sub(r"(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])", r"<em>\1</em>", text)
     text = re.sub(r"\0(\d+)\0", lambda m: codes[int(m.group(1))], text)
@@ -82,7 +88,7 @@ def join_wrapped_items(lines):
     return out
 
 
-def md_to_html(md, title=""):
+def md_to_html(md, title="", *, render_links=False):
     md = re.sub(r"<!--.*?-->", "", md, flags=re.S)
     lines = join_wrapped_items(md.split("\n"))
     out = []
@@ -114,7 +120,7 @@ def md_to_html(md, title=""):
         if m:
             close_lists()
             level = len(m.group(1))
-            out.append(f"<h{level}>{inline(m.group(2).strip())}</h{level}>")
+            out.append(f"<h{level}>{inline(m.group(2).strip(), render_links=render_links)}</h{level}>")
             i += 1
             continue
         if re.match(r"^(-{3,}|\*{3,})$", stripped):
@@ -134,9 +140,9 @@ def md_to_html(md, title=""):
                 head, body = None, rows
             t = ["<table>"]
             if head:
-                t.append("<tr>" + "".join(f"<th>{inline(c)}</th>" for c in head) + "</tr>")
+                t.append("<tr>" + "".join(f"<th>{inline(c, render_links=render_links)}</th>" for c in head) + "</tr>")
             for r in body:
-                t.append("<tr>" + "".join(f"<td>{inline(c)}</td>" for c in r) + "</tr>")
+                t.append("<tr>" + "".join(f"<td>{inline(c, render_links=render_links)}</td>" for c in r) + "</tr>")
             t.append("</table>")
             out.append("".join(t))
             continue
@@ -146,26 +152,26 @@ def md_to_html(md, title=""):
             while i < len(lines) and lines[i].strip().startswith(">"):
                 quote.append(lines[i].strip()[1:].strip())
                 i += 1
-            out.append("<blockquote>" + "<br>".join(inline(q) for q in quote) + "</blockquote>")
+            out.append("<blockquote>" + "<br>".join(inline(q, render_links=render_links) for q in quote) + "</blockquote>")
             continue
         m = re.match(r"^(\s*)([-*+]|\d+[.)])\s+(.*)$", ln)
         if m:
             indent = len(m.group(1).expandtabs(4))
             tag = "ol" if m.group(2)[0].isdigit() else "ul"
             if list_stack and indent > list_stack[-1][0]:
-                out.append(f"<{tag}><li>{inline(m.group(3))}")
+                out.append(f"<{tag}><li>{inline(m.group(3), render_links=render_links)}")
                 list_stack.append((indent, tag))
             else:
                 close_lists(indent)
                 if list_stack and list_stack[-1][0] == indent:
-                    out.append(f"</li><li>{inline(m.group(3))}")
+                    out.append(f"</li><li>{inline(m.group(3), render_links=render_links)}")
                 else:
-                    out.append(f"<{tag}><li>{inline(m.group(3))}")
+                    out.append(f"<{tag}><li>{inline(m.group(3), render_links=render_links)}")
                     list_stack.append((indent, tag))
             i += 1
             continue
         if list_stack and ln.startswith((" ", "\t")):
-            out.append(" " + inline(stripped))  # continuation of the current list item
+            out.append(" " + inline(stripped, render_links=render_links))  # continuation of the current list item
             i += 1
             continue
         close_lists()
@@ -174,7 +180,7 @@ def md_to_html(md, title=""):
         while i < len(lines) and lines[i].strip() and not re.match(r"^(#{1,6}\s|\s*([-*+]|\d+[.)])\s|\||>|```|-{3,})", lines[i]):
             para.append(lines[i].strip())
             i += 1
-        out.append(f"<p>{inline(' '.join(para))}</p>")
+        out.append(f"<p>{inline(' '.join(para), render_links=render_links)}</p>")
     close_lists()
     return (f"<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(title)}</title>"
             f"<style>{CSS}</style></head><body>{''.join(out)}</body></html>")

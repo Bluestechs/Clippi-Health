@@ -10,7 +10,6 @@ a = Analysis(
     datas=[
         (str(root / "hp"), "."),
         (str(root / "connectors"), "connectors"),
-        (str(root / "docs" / "EPIC_REGISTRATION.md"), "docs"),
         (str(root / "scripts" / "dashboard_template.html"), "scripts"),
         (str(root / "scripts" / "pdftext.swift"), "scripts"),
         (str(root / "vendor" / "plotly-basic.min.js"), "vendor"),
