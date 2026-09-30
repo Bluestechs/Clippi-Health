@@ -7,6 +7,11 @@ on:
         description: Also build ad-hoc macOS evaluation packages
         type: boolean
         default: true
+      platforms:
+        description: Windows/Linux evaluation targets
+        type: choice
+        options: [windows-linux, windows, linux]
+        default: windows-linux
 
 permissions:
   contents: read
@@ -21,6 +26,7 @@ jobs:
       - id: targets
         env:
           INCLUDE_MACOS: ${{ inputs.include_macos }}
+          PLATFORMS: ${{ inputs.platforms }}
         run: |
           python3 - <<'PY'
           import json, os
@@ -34,6 +40,10 @@ jobs:
           ]
           if os.environ["INCLUDE_MACOS"] != "true":
               targets = [target for target in targets if not target["os"].startswith("macos-")]
+          if os.environ["PLATFORMS"] == "windows":
+              targets = [target for target in targets if not target["os"].startswith("ubuntu-")]
+          elif os.environ["PLATFORMS"] == "linux":
+              targets = [target for target in targets if not target["os"].startswith("windows-")]
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write("matrix=" + json.dumps({"include": targets}) + "\n")
           PY
@@ -144,7 +154,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Upload fictional desktop smoke evidence
-        if: runner.os != 'macOS'
+        if: always() && runner.os != 'macOS'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ matrix.artifact }}-smoke

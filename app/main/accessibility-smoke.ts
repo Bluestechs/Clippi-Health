@@ -19,9 +19,14 @@ const layoutProbe = `(() => {
     if (el.closest('.table-scroll,table,.testlist,.results')) return false;
     const r = el.getBoundingClientRect(); return r.left < -1 || r.right > innerWidth + 1;
   });
+  const overflow = [...document.body.querySelectorAll("*")].filter(visible).filter(el => !el.closest(".table-scroll,table,.testlist,.results")).map(el => {
+    const rect = el.getBoundingClientRect();
+    return { element: el.id || el.className || el.tagName, right: rect.right, width: rect.width };
+  }).filter(rect => rect.right > innerWidth + 1);
   return { reflow: document.documentElement.scrollWidth <= innerWidth + 1,
     targets: tiny.length === 0, unclippedControls: clipped.length === 0,
-    width: innerWidth, tiny: tiny.map(el => el.id || el.className), clipped: clipped.map(el => el.id || el.className) };
+    width: innerWidth, scrollWidth: document.documentElement.scrollWidth, overflow,
+    tiny: tiny.map(el => el.id || el.className), clipped: clipped.map(el => el.id || el.className) };
 })()`;
 
 // Composite rendered backgrounds rather than comparing token names alone.
@@ -136,6 +141,7 @@ export async function runAccessibilitySmoke(window: BrowserWindow, frame: WebFra
     const rules=await window.webContents.executeJavaScript(textResizeRules);
     const css=await window.webContents.insertCSS(rules);
     const result=await window.webContents.executeJavaScript(layoutProbe);evidence.push({textResize:2,tab,result});
+    await save("accessibility-text-200-shell-"+tab);
     await window.webContents.removeInsertedCSS(css);
     if(!result.reflow || !result.unclippedControls) throw new Error(`Shell 200% text ${tab}: ${JSON.stringify(result)}`);
   }
