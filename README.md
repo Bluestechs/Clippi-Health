@@ -123,6 +123,10 @@ scripts/              dashboard, PDF, redaction, and serving helpers
 vendor/               third-party browser assets with their own licenses
 ```
 
+## Accessibility
+
+Accessibility is a high-priority feature for the desktop app and web dashboard. The target is WCAG 2.2 AA; conformance is not yet claimed. See the [current assessment, fixes, and remaining issues](docs/ACCESSIBILITY.md).
+
 ## Privacy
 
 Clippi-Health does not include telemetry or operate a hosted service. Direct connections send authorization and record requests only to the health system selected by the user. Portal credentials are entered on that system's page, records download directly to the user's computer, and one-shot OAuth tokens are discarded when the local helper exits.

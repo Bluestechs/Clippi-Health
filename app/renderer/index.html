@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-src hp:; connect-src 'self'">
 <title>Clippi-Health</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to content</a>
 <header>
   <div class="head">
     <img class="brand-logo" src="logo.png" alt="">
@@ -15,7 +17,7 @@
     <span class="built" id="built"></span>
     <button id="demo-toggle" class="ghost" type="button" title="Open Sally Seastar’s fictional record for a demonstration">Try demo</button>
     <div class="theme-picker" id="theme-picker">
-      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Choose color theme" aria-haspopup="menu" aria-expanded="false" title="Choose color theme"><span aria-hidden="true">🎨</span></button>
+      <button id="theme-toggle" aria-controls="theme-menu" class="theme-toggle" type="button" aria-label="Choose color theme" aria-haspopup="menu" aria-expanded="false" title="Choose color theme"><span aria-hidden="true">🎨</span></button>
       <div id="theme-menu" class="theme-menu" role="menu" aria-label="Color theme" hidden>
         <button type="button" data-theme-value="system" role="menuitemradio" aria-checked="false"><span>System</span><span class="theme-check" aria-hidden="true">✓</span></button>
         <button type="button" data-theme-value="light" role="menuitemradio" aria-checked="false"><span>Light · Paper</span><span class="theme-check" aria-hidden="true">✓</span></button>
@@ -23,13 +25,13 @@
       </div>
     </div>
   </div>
-  <nav id="tabs">
-    <button data-tab="dashboard" aria-selected="true">Dashboard</button>
-    <button data-tab="import">Sources</button>
-    <button data-tab="build">Build</button>
-    <button data-tab="events">Timeline events</button>
-    <button data-tab="notes">Notes</button>
-    <button data-tab="doctor">Doctor</button>
+  <nav id="tabs" role="tablist" aria-label="Clippi-Health sections">
+    <button role="tab" id="view-dashboard" aria-controls="tab-dashboard" data-tab="dashboard" aria-selected="true">Dashboard</button>
+    <button role="tab" id="view-import" aria-controls="tab-import" data-tab="import">Sources</button>
+    <button role="tab" id="view-build" aria-controls="tab-build" data-tab="build">Build</button>
+    <button role="tab" id="view-events" aria-controls="tab-events" data-tab="events">Timeline events</button>
+    <button role="tab" id="view-notes" aria-controls="tab-notes" data-tab="notes">Notes</button>
+    <button role="tab" id="view-doctor" aria-controls="tab-doctor" data-tab="doctor">Doctor</button>
   </nav>
 </header>
 
@@ -41,16 +43,16 @@
   <button id="mode-back" hidden>Return to current records</button>
 </div>
 
-<main>
-  <section id="tab-dashboard">
+<main id="main-content" tabindex="-1">
+  <section role="tabpanel" aria-labelledby="view-dashboard" tabindex="-1" id="tab-dashboard">
     <div class="row">
       <button id="open-external" class="ghost">Open in browser</button>
-      <span class="muted" id="dashboard-note"></span>
+      <span class="muted" id="dashboard-note" role="status" aria-live="polite"></span>
     </div>
     <iframe id="dashboard" title="Dashboard"></iframe>
   </section>
 
-  <section id="tab-import" hidden>
+  <section role="tabpanel" aria-labelledby="view-import" tabindex="-1" id="tab-import" hidden>
     <div class="card">
       <h2>Your data sources</h2>
       <p class="sub">Add a new source or refresh an existing one below. Imports and connections stay on this computer.</p>
@@ -82,13 +84,13 @@
     </div>
   </section>
 
-  <section id="tab-build" hidden>
+  <section role="tabpanel" aria-labelledby="view-build" tabindex="-1" id="tab-build" hidden>
     <div class="card">
       <h2>Rebuild the record</h2>
       <p class="sub">Reads everything in raw/ and writes data/health.db, the reference documents and
         dashboard.html. The Apple device-data pass takes about 30 seconds.</p>
       <button id="build-run">Rebuild now</button>
-      <span class="muted" id="build-state"></span>
+      <span class="muted" id="build-state" role="status" aria-live="polite"></span>
     </div>
     <div class="card" id="summary-card" hidden>
       <h2>What is here</h2>
@@ -96,7 +98,7 @@
     </div>
   </section>
 
-  <section id="tab-events" hidden>
+  <section role="tabpanel" aria-labelledby="view-events" tabindex="-1" id="tab-events" hidden>
     <div class="card">
       <h2>curated_events.csv</h2>
       <p class="sub">Hand-written timeline events. <code>docs</code> cites records as
@@ -105,25 +107,25 @@
       <div class="row">
         <button id="events-add">Add row</button>
         <button id="events-save">Save</button>
-        <span class="muted" id="events-state"></span>
+        <span class="muted" id="events-state" role="status" aria-live="polite"></span>
       </div>
       <div class="table-scroll"><table id="events-table"></table></div>
     </div>
   </section>
 
-  <section id="tab-notes" hidden>
+  <section role="tabpanel" aria-labelledby="view-notes" tabindex="-1" id="tab-notes" hidden>
     <div class="card">
       <h2>case_study_notes.md</h2>
       <p class="sub">Your own notes and questions. Appended verbatim to data/CASE_STUDY.md on every build.</p>
       <div class="row">
         <button id="notes-save">Save</button>
-        <span class="muted" id="notes-state"></span>
+        <span class="muted" id="notes-state" role="status" aria-live="polite"></span>
       </div>
-      <textarea id="notes" spellcheck="true"></textarea>
+      <textarea aria-label="Personal notes and questions" id="notes" spellcheck="true"></textarea>
     </div>
   </section>
 
-  <section id="tab-doctor" hidden>
+  <section role="tabpanel" aria-labelledby="view-doctor" tabindex="-1" id="tab-doctor" hidden>
     <div class="card">
       <h2>Doctor</h2>
       <p class="sub">Prerequisites and the state of this data folder.</p>
@@ -139,7 +141,7 @@
 
 <div id="drawer">
   <div class="drawer-head">
-    <button id="log-toggle" class="ghost">Log</button>
+    <button id="log-toggle" aria-controls="log" aria-expanded="false" class="ghost">Log</button>
     <span class="muted" id="log-last"></span>
   </div>
   <pre id="log" hidden></pre>

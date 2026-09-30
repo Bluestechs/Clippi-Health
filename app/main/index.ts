@@ -34,8 +34,8 @@ function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
     height: 860,
-    minWidth: 900,
-    minHeight: 600,
+    minWidth: 360,
+    minHeight: 300,
     title: "Clippi-Health",
     icon: join(__dirname, "logo.png"),
     backgroundColor: "#f9f9f7",
@@ -72,8 +72,8 @@ app.whenReady().then(async () => {
   mainWindow = createWindow();
 
   if (process.argv.includes("--smoke")) {
-    await runSmoke(mainWindow);
-    app.quit();
+    try { await runSmoke(mainWindow); app.quit(); }
+    catch (error) { console.error(error); app.exit(1); }
     return;
   }
 

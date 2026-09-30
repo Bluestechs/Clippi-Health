@@ -2,6 +2,12 @@
 
 Clippi-Health is local-first. It will not operate or depend on a hosted Clippi-Health account, data relay, webhook receiver, connector aggregator, telemetry system, or remote medical-record database. Generated data is disposable and may be rebuilt when schemas change.
 
+## Accessibility — high priority
+
+- Target WCAG 2.2 AA for the web dashboard and Electron app; current conformance is unclaimed. Maintain the [assessment and status](docs/ACCESSIBILITY.md).
+- Local chart controls and sampled zoom/spacing/contrast/focus fixes are implemented. Complete the manual and native-platform verification tracked in [chart controls and hover equivalents (#7)](https://github.com/bennydogg/clippi-health/issues/7), [zoom/reflow/contrast/focus coverage (#8)](https://github.com/bennydogg/clippi-health/issues/8), and [screen-reader assessment and regression checks (#9)](https://github.com/bennydogg/clippi-health/issues/9) as release priorities.
+- Keep keyboard navigation, visible selection/context, accessible names, text chart alternatives, and predictable return behavior part of routine UI acceptance. Test using fictional records only.
+
 ## Direct connector experience
 
 - Polish the **Connect a health system** desktop flow with cancellation, richer progress, and provider-specific recovery guidance. The app owns the helper lifecycle; users never manage a daemon or terminal process.

@@ -8,34 +8,34 @@
 :root {
   color-scheme: light;
   --page: #d2cbc0; --surface: #f0ebe3; --surface-2: #c2b8aa;
-  --ink: #282522; --ink-2: #4c463f; --muted: #6a6258;
-  --grid: #a89d8f; --axis: #8f8476; --border: rgba(40,37,34,0.18); --border-solid: #8f8476;
-  --series-1: #175f97; --series-2: #a64b20; --insulin-basal: #b04f85;
+  --ink: #282522; --ink-2: #4c463f; --muted: #4c463f;
+  --grid: #a89d8f; --axis: #8f8476; --border: rgba(40,37,34,0.18); --border-solid: #675d53;
+  --series-1: #124e7c; --series-2: #a64b20; --insulin-basal: #b04f85;
   --band: rgba(106,98,88,0.18); --wash: rgba(23,95,151,0.12); --series-1-wash: rgba(23,95,151,0.16);
-  --good: #2e6f40; --serious: #a64b20; --critical: #a62f3e; --mark: #d8b86f;
+  --good: #235532; --serious: #823913; --critical: #872534; --mark: #d8b86f;
   --c-blue: #175f97; --c-orange: #a64b20; --c-aqua: #26756d; --c-yellow: #8b6914; --c-magenta: #9b466f; --c-green: #2e6f40; --c-violet: #65519a; --c-red: #a62f3e;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
     --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
-    --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
-    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --border-solid: #2c2c2a;
-    --series-1: #3987e5; --series-2: #d95926; --insulin-basal: #f38bb6;
+    --ink: #ffffff; --ink-2: #c3c2b7; --muted: #aaa79f;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --border-solid: #918e84;
+    --series-1: #64a5f3; --series-2: #ef824f; --insulin-basal: #f38bb6;
     --band: rgba(137,135,129,0.20); --wash: rgba(57,135,229,0.16); --series-1-wash: rgba(57,135,229,0.18);
-    --mark: #5c4a12;
-    --c-blue: #3987e5; --c-orange: #d95926; --c-aqua: #199e70; --c-yellow: #c98500; --c-magenta: #d55181; --c-green: #008300; --c-violet: #9085e9; --c-red: #e66767;
+    --mark: #5c4a12; --good: #65c178; --serious: #ef824f; --critical: #f48686;
+    --c-blue: #3987e5; --c-orange: #d95926; --c-aqua: #199e70; --c-yellow: #c98500; --c-magenta: #d55181; --c-green: #65c178; --c-violet: #9085e9; --c-red: #e66767;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
   --page: #0d0d0d; --surface: #1a1a19; --surface-2: #232321;
-  --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
-  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --border-solid: #2c2c2a;
-  --series-1: #3987e5; --series-2: #d95926; --insulin-basal: #f38bb6;
+  --ink: #ffffff; --ink-2: #c3c2b7; --muted: #aaa79f;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --border-solid: #918e84;
+  --series-1: #64a5f3; --series-2: #ef824f; --insulin-basal: #f38bb6;
   --band: rgba(137,135,129,0.20); --wash: rgba(57,135,229,0.16); --series-1-wash: rgba(57,135,229,0.18);
-  --mark: #5c4a12;
-  --c-blue: #3987e5; --c-orange: #d95926; --c-aqua: #199e70; --c-yellow: #c98500; --c-magenta: #d55181; --c-green: #008300; --c-violet: #9085e9; --c-red: #e66767;
+  --mark: #5c4a12; --good: #65c178; --serious: #ef824f; --critical: #f48686;
+  --c-blue: #3987e5; --c-orange: #d95926; --c-aqua: #199e70; --c-yellow: #c98500; --c-magenta: #d55181; --c-green: #65c178; --c-violet: #9085e9; --c-red: #e66767;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--page); color: var(--ink); }
@@ -57,7 +57,7 @@ section[hidden] { display: none; }
 .card h2 { font-size: 15px; margin: 0 0 2px; font-weight: 600; }
 .card .sub { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
 .grid { display: grid; gap: 16px; }
-.cols-2 { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.cols-2 { grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); }
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
 .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
 .tile .label { color: var(--ink-2); font-size: 12px; }
@@ -73,7 +73,13 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .flag.high, .flag.low, .flag.abnormal { color: var(--critical); }
 .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
 input[type=search], select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border-solid); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+input[type=date] { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border-solid); border-radius: 8px; padding: 6px; min-width: 0; max-width: 100%; }
+.chart-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin: 12px 0; }
+.chart-controls label { display: grid; gap: 4px; font-size: 13px; min-width: 0; }
+.chart-controls button { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--border-solid); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+.chart-controls .range-status { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--ink-2); }
 input[type=search] { flex: 1 1 240px; }
+input::placeholder { color: var(--muted); opacity: 1; }
 .seg { display: inline-flex; border: 1px solid var(--border-solid); border-radius: 8px; overflow: hidden; }
 .seg button { font: inherit; font-size: 13px; background: var(--surface); color: var(--ink-2); border: 0; padding: 6px 10px; cursor: pointer; }
 .seg button + button { border-left: 1px solid var(--border-solid); }
@@ -87,13 +93,14 @@ label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--
 .test[aria-pressed="true"] { background: var(--wash); }
 .test .n { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .test .last { grid-column: 1 / -1; color: var(--ink-2); font-size: 12px; }
-.charts { display: grid; gap: 16px; }
+.charts { display: grid; gap: 16px; min-width: 0; }
+.labs-layout > *, .records-layout > * { min-width: 0; }
 .diabetes-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
 .diabetes-pair > .card { min-width: 0; display: flex; flex-direction: column; }
 .diabetes-pair .chart { margin-top: auto; }
 .diabetes-pair .sub { min-height: 3.5em; }
 @media (max-width: 860px) { .diabetes-pair { grid-template-columns: minmax(0, 1fr); } }
-.chart { width: 100%; }
+.chart { width: 100%; max-width: 100%; overflow: auto; }
 details summary { cursor: pointer; color: var(--ink-2); font-size: 13px; margin-top: 8px; }
 .empty { color: var(--muted); padding: 24px; text-align: center; }
 .event-detail { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
@@ -103,12 +110,15 @@ details summary { cursor: pointer; color: var(--ink-2); font-size: 13px; margin-
 .linkbtn { font: inherit; background: none; border: 0; color: var(--series-1); cursor: pointer; padding: 0; text-align: left; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font: inherit; font-size: 13px; background: var(--surface); color: var(--ink-2); border: 1px solid var(--border-solid); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
-.chip[aria-pressed="true"] { background: var(--wash); color: var(--ink); border-color: transparent; font-weight: 600; }
+.chip[aria-pressed="true"] { background: var(--wash); color: var(--ink); border-color: var(--border-solid); font-weight: 600; }
 .records-layout { display: grid; grid-template-columns: minmax(280px, 400px) 1fr; gap: 16px; align-items: start; }
 .results { max-height: calc(100vh - 230px); overflow: auto; padding: 4px; }
 .result { display: block; width: 100%; text-align: left; font: inherit; color: var(--ink); background: none; border: 0; border-bottom: 1px solid var(--border); padding: 10px 8px; cursor: pointer; }
 .result:hover { background: var(--surface-2); }
 .result[aria-current="true"] { background: var(--wash); }
+.result[aria-current="true"] { box-shadow: inset 0 0 0 2px var(--series-1); }
+.chip[aria-pressed="true"]::after, .seg button[aria-pressed="true"]::after { content: " ✓"; }
+.test[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--series-1); }
 .result .meta { color: var(--muted); font-size: 12px; }
 .result .snip { color: var(--ink-2); font-size: 12px; margin-top: 2px; }
 .reader { position: sticky; overflow-anchor: none; top: 110px; max-height: calc(100vh - 130px); overflow: auto; }
@@ -127,7 +137,7 @@ ul.plain li { padding: 5px 0; border-bottom: 1px solid var(--border); font-size:
 .topic-card .actions { display: flex; gap: 6px; }
 .status { font-size: 11px; border-radius: 999px; padding: 0 7px; border: 1px solid var(--border-solid); color: var(--ink-2); }
 .status.focus { background: var(--tc); color: #fff; border-color: transparent; font-weight: 600; }
-.tag { display: inline-block; font-size: 11px; font-weight: 500; color: var(--ink); background: color-mix(in srgb, var(--tc) 16%, transparent); border-radius: 999px; padding: 0 7px 0 5px; white-space: nowrap; margin-right: 4px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 500; color: var(--ink); background: color-mix(in srgb, var(--tc) 16%, transparent); border-radius: 999px; padding: 0 7px 0 5px; white-space: normal; margin-right: 4px; max-width: 100%; }
 .tag::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--tc); margin-right: 5px; vertical-align: 1px; }
 .tags { margin-top: 3px; }
 .pill.src::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--sc); margin-right: 5px; vertical-align: 1px; }
@@ -144,7 +154,42 @@ ul.plain li { padding: 5px 0; border-bottom: 1px solid var(--border); font-size:
 .dots i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
 .card.topic-edge { border-left: 4px solid var(--tc); }
 tr.abn td { background: color-mix(in srgb, var(--critical) 8%, transparent); }
-.back-results { display: none; }
+.back-results { display: inline-block; margin-bottom: 12px; }
+.back-results[hidden] { display: none; }
+.view-context { margin-bottom: 16px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.view-context .context-heading { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; }
+.view-context h2 { margin: 4px 0; font-size: 20px; }
+.view-context .context-actions, .active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.active-filters { margin-top: 10px; }
+.view-context details { margin-top: 8px; }
+.view-context .filter-chip { color: var(--ink); background: var(--wash); }
+.view-context .sub { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.context-return { font-size: 13px; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 3px solid var(--series-1); outline-offset: 3px; }
+button, input, select, summary { min-height: 28px; }
+button { min-width: 28px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.skip-link { position: fixed; top: 8px; left: 8px; z-index: 100; padding: 12px; background: var(--surface); transform: translateY(-180%); }
+.skip-link:focus { transform: none; }
+.context-heading h2 { overflow-wrap: anywhere; }
+.view-context .filter-chip { overflow-wrap: anywhere; max-width: 100%; }
+#reader-content, #main-content, [role="tabpanel"] { scroll-margin-top: 60px; }
+body { overflow-wrap: anywhere; }
+.legend, .topic-card .row, .result .row, .reader .row { flex-wrap: wrap; }
+.seg { flex-wrap: wrap; }
+button { white-space: normal; overflow-wrap: anywhere; }
+.card table { display: block; overflow: auto; max-width: 100%; }
+.card table td { white-space: normal; }
+.hoverlayer .hovertext { pointer-events: all; }
+@media (forced-colors: active) {
+  :root { --page: Canvas; --surface: Canvas; --surface-2: Canvas; --ink: CanvasText; --ink-2: CanvasText; --muted: CanvasText; --border: ButtonBorder; --border-solid: ButtonBorder; --series-1: LinkText; --wash: Canvas; }
+  button[aria-pressed="true"], .result[aria-current="true"], nav button[aria-selected="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
+  :focus-visible { outline: 3px solid Highlight; outline-offset: 3px; }
+  .flag { color: CanvasText !important; }
+}
+.status.focus { background: var(--wash); color: var(--ink); border-color: var(--tc); }
+.topic-card .actions { flex-wrap: wrap; }
 @media (max-width: 860px) {
   nav button { min-height: 44px; }
   .labs-layout, .records-layout { grid-template-columns: 1fr; }
@@ -192,6 +237,13 @@ tr.abn td { background: color-mix(in srgb, var(--critical) 8%, transparent); }
   .card table th, .card table td { min-width: 65px; }
   .legend { flex-wrap: wrap; gap: 5px 12px; }
 }
+@media (max-width: 860px), (max-height: 600px) {
+  header, .filter-panel, .testlist, .reader { position: static; }
+  .reader, .results { max-height: none; }
+  .filter-panel .chips { flex-wrap: wrap; overflow: visible; }
+  .filter-panel .chips > * { flex: initial; white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
 @media print {
   header nav, .controls, .no-print { display: none !important; }
   header { position: static; }
@@ -201,6 +253,7 @@ tr.abn td { background: color-mix(in srgb, var(--critical) 8%, transparent); }
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main-content">Skip to content</a>
 <div class="site-head">
   <div class="wrap">
     <div class="head">
@@ -213,28 +266,30 @@ tr.abn td { background: color-mix(in srgb, var(--critical) 8%, transparent); }
 </div>
 <header>
   <div class="wrap">
-    <nav role="tablist" id="tabs">
-      <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
-      <button role="tab" data-tab="labs" aria-selected="false">Labs</button>
-      <button role="tab" data-tab="vitals" aria-selected="false">Vitals</button>
-      <button role="tab" data-tab="records" aria-selected="false">Records</button>
+    <nav role="tablist" aria-label="Health record views" id="tabs">
+      <button role="tab" id="view-overview" aria-controls="tab-overview" data-tab="overview" aria-selected="true">Overview</button>
+      <button role="tab" id="view-labs" aria-controls="tab-labs" data-tab="labs" aria-selected="false">Labs</button>
+      <button role="tab" id="view-vitals" aria-controls="tab-vitals" data-tab="vitals" aria-selected="false">Vitals</button>
+      <button role="tab" id="view-records" aria-controls="tab-records" data-tab="records" aria-selected="false">Records</button>
     </nav>
   </div>
 </header>
-<main class="wrap">
-  <section id="tab-overview">
-    <div class="tiles" id="tiles"></div>
+<main class="wrap" id="main-content" tabindex="-1">
+  <div class="sr-only" id="view-status" role="status" aria-live="polite" aria-atomic="true"></div>
+  <section role="tabpanel" aria-labelledby="view-overview" tabindex="-1" id="tab-overview">
     <div class="card" style="margin-bottom:16px" id="focus-card">
-      <h2>Focus</h2>
-      <p class="sub">Topics from topics.json. Each topic keeps its color everywhere: tags on records, dots on lab tests, filters.</p>
+      <h2>Explore by topic</h2>
+      <p class="sub">Choose a topic to read related records or explore lab trends.</p>
       <div class="topics" id="focus"></div>
     </div>
+    <div class="tiles" id="tiles"></div>
     <div class="card" style="margin-bottom:16px">
       <h2>Timeline</h2>
-      <p class="sub">Diagnoses, surgeries and procedures, hospital and ED visits, imaging, and reports. Hover for the name; click for details and linked notes. Drag to zoom, double-click to reset.</p>
+      <p class="sub">Diagnoses, surgeries and procedures, hospital and ED visits, imaging, and reports. Choose dates to zoom; use the event list for details and linked records.</p>
       <div class="legend" id="timeline-legend"></div>
-      <div id="timeline" class="chart"></div>
-      <div class="event-detail" id="event-detail" hidden></div>
+      <div id="timeline" class="chart" role="img" aria-label="Timeline chart. Use the event list below for keyboard access and full event text."></div>
+      <details><summary>Timeline event list</summary><div id="timeline-events"></div></details>
+      <div class="event-detail" id="event-detail" tabindex="-1" hidden></div>
     </div>
     <div class="grid cols-2">
       <div class="card"><h2>Problem list</h2><p class="sub">As recorded by each health system, with the date first noted</p><div id="problems"></div></div>
@@ -244,11 +299,12 @@ tr.abn td { background: color-mix(in srgb, var(--critical) 8%, transparent); }
     </div>
   </section>
 
-  <section id="tab-labs" hidden>
+  <section role="tabpanel" aria-labelledby="view-labs" tabindex="-1" id="tab-labs" hidden>
+    <div class="view-context" id="lab-context"></div>
     <div class="filter-panel">
     <div class="controls">
-      <input type="search" id="test-filter" placeholder="Find a test (e.g. A1c, creatinine, IgG)">
-      <div class="seg" id="lab-range"></div>
+      <input type="search" id="test-filter" aria-label="Find a lab test" placeholder="Find a test (e.g. A1c, creatinine, IgG)">
+      <div class="seg" id="lab-range" role="group" aria-label="Lab date range"></div>
       <label class="check"><input type="checkbox" id="lab-events" checked> Mark diagnoses, treatments &amp; procedures</label>
       <button class="chip" id="lab-clear">Clear selection</button>
     </div>
@@ -260,23 +316,24 @@ tr.abn td { background: color-mix(in srgb, var(--critical) 8%, transparent); }
     </div>
   </section>
 
-  <section id="tab-vitals" hidden>
-    <div class="filter-panel"><div class="controls"><div class="seg" id="vit-range"></div></div></div>
+  <section role="tabpanel" aria-labelledby="view-vitals" tabindex="-1" id="tab-vitals" hidden>
+    <div class="filter-panel"><div class="controls"><div class="seg" id="vit-range" role="group" aria-label="Vitals date range"></div></div></div>
     <div class="charts" id="vitals"></div>
   </section>
 
-  <section id="tab-records" hidden>
+  <section role="tabpanel" aria-labelledby="view-records" tabindex="-1" id="tab-records" hidden>
+    <div class="view-context" id="rec-context"></div>
     <div class="filter-panel">
     <div class="controls">
-      <input type="search" id="rec-q" placeholder="Search notes, reports, messages, documents (all words must match)">
-      <select id="rec-src"></select>
+      <input type="search" id="rec-q" aria-label="Search records" placeholder="Search notes, reports, messages, documents (all words must match)">
+      <select id="rec-src" aria-label="Record source"></select>
     </div>
     <div class="controls chips" id="rec-topics"></div>
     <div class="controls chips" id="rec-kinds"></div>
     </div>
     <div class="records-layout">
       <div class="card results" id="rec-list"></div>
-      <div class="card reader" id="reader"><button class="chip back-results" id="back-results">← All results</button><div id="reader-content"><div class="empty">Select a record to read it.</div></div></div>
+      <div class="card reader" id="reader"><button class="chip back-results" id="back-results" hidden>← Back to results</button><div id="reader-content" tabindex="-1"><div class="empty">Select a record to read it.</div></div></div>
     </div>
   </section>
 </main>
@@ -291,16 +348,17 @@ const $ = (s, el = document) => el.querySelector(s);
 function h(tag, props, ...kids) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(props || {})) {
-    if (v == null || v === false) continue;
+    if (v == null || (v === false && !k.startsWith("aria-"))) continue;
     if (k === "class") el.className = v;
     else if (k === "text") el.textContent = v;
     else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
-    else el.setAttribute(k, v === true ? "" : v);
+    else el.setAttribute(k, k.startsWith("aria-") ? String(v) : v === true ? "" : v);
   }
   for (const kid of kids.flat()) {
     if (kid == null || kid === false) continue;
     el.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
   }
+  if (tag === "th" && !el.hasAttribute("scope")) el.setAttribute("scope", "col");
   return el;
 }
 const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -313,6 +371,63 @@ const store = {
   set(k, v) { try { localStorage.setItem("hp:" + k, JSON.stringify(v)); } catch {} },
 };
 const plotConfig = { displayModeBar: false, responsive: true };
+// View preferences only: no source records or chart values are modified.
+let chartViews = {};
+function chartControls(key, title, defaultRange) {
+  const charts = [];
+  const fallback = defaultRange.map(d => String(d).slice(0, 10));
+  if (fallback[0] === fallback[1]) fallback[1] = new Date(Date.parse(fallback[1]) + 864e5).toISOString().slice(0, 10);
+  let range = chartViews[key] || fallback, syncing = false;
+  const from = h("input", { type: "date", required: true, "aria-label": `${title}: From date` });
+  const to = h("input", { type: "date", required: true, "aria-label": `${title}: To date` });
+  const status = h("p", { class: "range-status", role: "status", "aria-live": "polite" });
+  const update = () => {
+    from.value = String(range[0]).slice(0, 10); to.value = String(range[1]).slice(0, 10);
+    to.min = from.value; from.max = to.value;
+    status.textContent = `Showing ${fmtDate(range[0])} – ${fmtDate(range[1])}`;
+  };
+  const apply = async next => {
+    range = [...next]; chartViews[key] = [...range]; update(); rememberView();
+    syncing = true;
+    try { await Promise.all(charts.map(chart => Plotly.relayout(chart, { "xaxis.range": range, "xaxis.autorange": false, "yaxis.autorange": true }))); }
+    finally { syncing = false; }
+  };
+  const move = direction => {
+    const days = Math.max(1, Math.round((Date.parse(range[1]) - Date.parse(range[0])) / 864e5));
+    return apply(range.map(d => new Date(Date.parse(d) + direction * days * 864e5).toISOString().slice(0, 10)));
+  };
+  const form = h("form", { class: "chart-controls", "aria-label": `${title}: Chart date range`, onsubmit: event => {
+    event.preventDefault(); to.setCustomValidity("");
+    if (!from.value || !to.value || from.value >= to.value) {
+      to.setCustomValidity("Choose a To date after the From date."); to.reportValidity(); return;
+    }
+    void apply([from.value, to.value]);
+  } }, h("label", null, "From", from), h("label", null, "To", to),
+    h("button", { type: "submit", text: "Apply" }),
+    h("button", { type: "button", text: "Previous window", onclick: () => void move(-1) }),
+    h("button", { type: "button", text: "Next window", onclick: () => void move(1) }),
+    h("button", { type: "button", text: "Reset view", onclick: () => void apply(fallback) }), status);
+  from.oninput = to.oninput = () => { to.setCustomValidity(""); to.min = from.value; from.max = to.value; };
+  update();
+  return { form, get range() { return [...range]; }, bind(chart) {
+    charts.push(chart);
+    chart.tabIndex = 0; // permits keyboard scrolling if a magnified plot needs it
+    chart.on("plotly_beforehover", () => !chart.hoverDismissed);
+    chart.addEventListener("pointerleave", () => { chart.hoverDismissed = false; });
+    chart.on("plotly_relayout", event => {
+      if (syncing || !chart.isConnected) return;
+      const next = event["xaxis.autorange"] === true ? fallback : event["xaxis.range"] ||
+        (event["xaxis.range[0]"] != null && event["xaxis.range[1]"] != null ? [event["xaxis.range[0]"], event["xaxis.range[1]"]] : null);
+      if (next) void apply(next);
+    });
+  } };
+}
+document.addEventListener("keydown", event => {
+  if (event.key !== "Escape") return;
+  for (const chart of document.querySelectorAll(".js-plotly-plot")) {
+    chart.hoverDismissed = true; Plotly.Fx.unhover(chart);
+  }
+});
 function baseLayout(extra) {
   const L = {
     paper_bgcolor: cssVar("--surface"), plot_bgcolor: cssVar("--surface"),
@@ -321,7 +436,7 @@ function baseLayout(extra) {
     xaxis: { type: "date", gridcolor: cssVar("--grid"), linecolor: cssVar("--axis"), zeroline: false,
              tickfont: { color: cssVar("--muted") }, showspikes: true, spikemode: "across", spikesnap: "cursor",
              spikethickness: 1, spikecolor: cssVar("--axis"), spikedash: "solid" },
-    yaxis: { gridcolor: cssVar("--grid"), zeroline: false, tickfont: { color: cssVar("--muted") }, automargin: true },
+    yaxis: { gridcolor: cssVar("--grid"), zeroline: false, tickfont: { color: cssVar("--muted") }, automargin: true, fixedrange: true },
     hoverlabel: { bgcolor: cssVar("--surface"), bordercolor: cssVar("--border-solid"), font: { color: cssVar("--ink"), size: 12 } },
     showlegend: false, hovermode: "closest", hoverdistance: 30, dragmode: "zoom",
   };
@@ -380,16 +495,66 @@ const srcPill = o => h("span", { class: "pill src", style: `--sc: var(--c-${srcC
   }
 })();
 const rendered = {};
-function showTab(name) {
-  if (name !== "records") $(".records-layout").classList.remove("viewing-record");
-  for (const b of document.querySelectorAll("#tabs button")) b.setAttribute("aria-selected", b.dataset.tab === name);
+let activeTab = null, restoringView = false;
+function viewSnapshot() {
+  return { tab: activeTab, records: { ...recState }, charts: structuredClone(chartViews), vitalRange: store.get("vitrange", "All"),
+    labs: { selected: store.get("labsel", null), topic: store.get("labtopic", null), range: store.get("labrange", "All"),
+      query: $("#test-filter").value, events: $("#lab-events").checked },
+    scroll: window.scrollY, resultsScroll: $("#rec-list").scrollTop };
+}
+function rememberView() {
+  if (activeTab && !restoringView) history.replaceState({ clippiView: viewSnapshot() }, "", location.href);
+}
+function saveView(replace = false) {
+  if (!restoringView) history[replace ? "replaceState" : "pushState"]({ clippiView: viewSnapshot() }, "", "#" + activeTab);
+}
+function showTab(name, quiet = false) {
+  if (!["overview", "labs", "vitals", "records"].includes(name)) name = "overview";
+  activeTab = name;
+  for (const b of document.querySelectorAll("#tabs button")) {
+    b.setAttribute("aria-selected", String(b.dataset.tab === name));
+    b.tabIndex = b.dataset.tab === name ? 0 : -1;
+  }
   for (const s of document.querySelectorAll("main > section")) s.hidden = s.id !== "tab-" + name;
   if (!rendered[name]) { rendered[name] = true; ({ overview: renderOverview, labs: renderLabs, vitals: renderVitals, records: renderRecords })[name](); }
   else window.dispatchEvent(new Event("resize"));
+  $(".records-layout").classList.toggle("viewing-record", name === "records" && recState.current != null);
   window.scrollTo(0, 0);
   store.set("tab", name);
+  if (!quiet) { saveView(); $("#tab-" + name).focus({ preventScroll: true }); }
 }
-document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+for (const b of document.querySelectorAll("#tabs button")) {
+  b.addEventListener("click", () => { rememberView(); showTab(b.dataset.tab, true); saveView(); b.focus(); });
+  b.addEventListener("keydown", event => {
+    const buttons = [...document.querySelectorAll("#tabs button")], index = buttons.indexOf(b);
+    const next = event.key === "ArrowRight" ? (index + 1) % buttons.length : event.key === "ArrowLeft" ? (index + buttons.length - 1) % buttons.length : event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : null;
+    if (next == null) return;
+    event.preventDefault(); buttons[next].click();
+  });
+}
+window.addEventListener("popstate", event => {
+  const view = event.state?.clippiView;
+  if (!view) return;
+  restoringView = true;
+  chartViews = structuredClone(view.charts || {});
+  store.set("vitrange", view.vitalRange || "All");
+  recState = { ...view.records };
+  store.set("rectopic", recState.topic); store.set("reckind", recState.kind);
+  store.set("labsel", view.labs.selected); store.set("labtopic", view.labs.topic); store.set("labrange", view.labs.range);
+  $("#test-filter").value = view.labs.query; $("#lab-events").checked = view.labs.events;
+  rendered.records = false; rendered.labs = false; rendered.vitals = false; rendered.overview = false;
+  showTab(view.tab, true);
+  restoringView = false;
+  requestAnimationFrame(() => {
+    window.scrollTo(0, view.scroll); $("#rec-list").scrollTop = view.resultsScroll;
+    $(recState.current && view.tab === "records" ? "#reader-content" : "#tab-" + view.tab).focus({ preventScroll: true });
+  });
+});
+function contextActions(topic, destination) {
+  return h("div", { class: "context-actions" },
+    h("button", { class: "chip context-return", text: "← Back to topics", onclick: () => { rememberView(); showTab("overview"); } }),
+    topic ? h("button", { class: "chip", text: destination === "records" ? "View topic charts" : "View topic records", onclick: () => destination === "records" ? showLabsFor(topic) : showRecordsFor(topic) }) : null);
+}
 
 // ---------- overview ----------
 function renderOverview() {
@@ -446,16 +611,19 @@ function drawFocus() {
     t.framing ? h("div", { class: "muted", text: t.framing }) : null,
     h("div", { class: "stats", text: `${t.docs.length} records · ${t.tests.length} tests · latest ${t.latest ? fmtDate(t.latest) : "—"}` }),
     h("div", { class: "actions" },
-      h("button", { class: "chip", text: "Records", onclick: () => showRecordsFor(t.name) }),
-      h("button", { class: "chip", text: "Chart labs", onclick: () => showLabsFor(t.name) })))));
+      h("button", { class: "chip", text: "View records", "aria-label": `View records for ${t.name}`, onclick: () => showRecordsFor(t.name) }),
+      h("button", { class: "chip", text: "View charts", "aria-label": `View charts for ${t.name}`, onclick: () => showLabsFor(t.name) })))));
 }
 function showRecordsFor(name) {
+  rememberView();
   $(".records-layout").classList.remove("viewing-record");
-  recState.topic = name; recState.kind = "all"; recState.q = ""; store.set("rectopic", name); store.set("reckind", "all");
-  if (rendered.records) { $("#rec-q").value = ""; drawRecTopics(); drawKinds(); drawResults(); }
+  recState.topic = name; recState.kind = "all"; recState.q = ""; recState.src = "all"; clearReader(); store.set("rectopic", name); store.set("reckind", "all");
+  if (rendered.records) { $("#rec-q").value = ""; $("#rec-src").value = "all"; drawRecTopics(); drawKinds(); drawResults(); }
   showTab("records");
 }
 function showLabsFor(name) {
+  rememberView();
+  $("#test-filter").value = "";
   const t = TOPICS.find(x => x.name === name);
   if (!t) return;
   store.set("labsel", t.chart_tests); store.set("labtopic", name);
@@ -466,6 +634,8 @@ function showLabsFor(name) {
 function drawTimeline() {
   const lanes = DATA.lanes.filter(l => DATA.events.some(e => e.lane === l)).reverse();
   const evs = DATA.events;
+  $("#timeline-events").replaceChildren(h("ul", { class: "plain" }, evs.slice().reverse().map(e => h("li", null,
+    h("button", { class: "linkbtn", text: `${fmtDate(e.date)} · ${e.lane} · ${e.title}`, onclick: () => { showEvent(e); $("#event-detail").focus(); } })))));
   const el = $("#timeline");
   if (!evs.length) { el.replaceChildren(h("div", { class: "empty", text: "No dated events yet." })); return; }
   const trace = {
@@ -481,8 +651,15 @@ function drawTimeline() {
     height: 70 + lanes.length * 46, margin: { l: narrow ? 95 : 150, r: 8, t: 10, b: 30 },
     yaxis: { type: "category", categoryorder: "array", categoryarray: lanes, gridcolor: cssVar("--grid"), tickfont: { color: cssVar("--ink-2"), size: narrow ? 10 : 12 }, fixedrange: true },
   });
-  Plotly.newPlot(el, [trace], layout, plotConfig);
-  el.on("plotly_click", ev => showEvent(evs[ev.points[0].pointIndex]));
+  $("#timeline-controls")?.remove();
+  const dates = evs.map(e => e.date).sort();
+  const controls = chartControls("timeline", "Timeline", [dates[0], dates.at(-1)]);
+  controls.form.id = "timeline-controls"; el.before(controls.form);
+  layout.xaxis.range = controls.range;
+  Plotly.newPlot(el, [trace], layout, plotConfig).then(() => {
+    controls.bind(el);
+    el.on("plotly_click", ev => showEvent(evs[ev.points[0].pointIndex]));
+  });
 }
 
 function showEvent(e) {
@@ -503,7 +680,8 @@ const RANGES = [["All", null], ["10y", 10], ["5y", 5], ["2y", 2], ["1y", 1]];
 function rangeStart(yrs) { if (!yrs) return null; const d = new Date(); d.setFullYear(d.getFullYear() - yrs); return d.toISOString().slice(0, 10); }
 function segControl(el, key, onChange) {
   let cur = store.get(key, "All");
-  const draw = () => el.replaceChildren(...RANGES.map(([label]) => h("button", { "aria-pressed": label === cur, text: label, onclick: () => { cur = label; store.set(key, cur); draw(); onChange(); } })));
+  if (!RANGES.some(r => r[0] === cur)) cur = "All";
+  const draw = () => el.replaceChildren(...RANGES.map(([label]) => h("button", { "aria-pressed": label === cur, text: label, onclick: () => { cur = label; store.set(key, cur); for (const k of Object.keys(chartViews)) if (k.startsWith(key === "labrange" ? "lab:" : "vital:")) delete chartViews[k]; draw(); onChange(); rememberView(); el.querySelector('[aria-pressed="true"]')?.focus(); } })));
   draw();
   return () => rangeStart(RANGES.find(r => r[0] === cur)[1]);
 }
@@ -534,7 +712,7 @@ function renderLabs() {
     setSelected(list, topic) { selected = list.filter(t => byTest.has(t)); labTopic = topic || null; store.set("labsel", selected); store.set("labtopic", labTopic); drawTopics(); drawList(); draw(); } };
   function drawTopics() {
     $("#lab-topics").replaceChildren(TOPICS.length ? h("span", { class: "muted", text: "Chart a topic:" }) : null, ...TOPICS.map(t =>
-      h("button", { class: "chip topic", style: `--tc: var(--c-${topicColor(t.name)})`, "aria-pressed": labTopic === t.name, text: `${t.name} (${t.chart_tests.length})`, title: t.chart_tests.join(", "), onclick: () => labState.setSelected(t.chart_tests, t.name) })));
+      h("button", { class: "chip topic", style: `--tc: var(--c-${topicColor(t.name)})`, "aria-pressed": labTopic === t.name, text: `${t.name} (${t.chart_tests.length})`, title: t.chart_tests.join(", "), onclick: () => { labState.setSelected(t.chart_tests, t.name); rememberView(); $("#lab-topics [aria-pressed=\"true\"]")?.focus(); } })));
     revealPressed($("#lab-topics"));
   }
 
@@ -550,20 +728,24 @@ function renderLabs() {
   }
   function toggle(t) {
     selected = selected.includes(t) ? selected.filter(x => x !== t) : [t, ...selected];
-    labTopic = null; store.set("labtopic", null); drawTopics();
-    store.set("labsel", selected); drawList(); draw();
+    drawTopics();
+    store.set("labsel", selected); drawList(); draw(); rememberView(); $("#testlist").querySelectorAll("button").forEach(b => { if (b.querySelector("span")?.textContent === t) b.focus(); });
   }
   function draw() {
     const box = $("#labcharts");
+    $("#lab-context").replaceChildren(
+      h("div", { class: "context-heading" }, h("h2", { text: labTopic ? `${labTopic} · Lab charts` : "Lab charts" }), contextActions(labTopic, "labs")),
+      h("p", { class: "sub", text: `${selected.length} selected tests · Date range: ${store.get("labrange", "All")} · ${labTopic && TOPICS.find(t => t.name === labTopic)?.chart_tests.every(t => selected.includes(t)) && selected.length === TOPICS.find(t => t.name === labTopic)?.chart_tests.length ? "Suggested topic selection" : "Custom selection"}` }),
+      h("div", { class: "active-filters" }, ...selected.map(t => h("button", { class: "chip filter-chip", text: `${t} ×`, "aria-label": `Remove ${t} from charts`, onclick: () => toggle(t) }))));
     if (!selected.length) { box.replaceChildren(h("div", { class: "card empty", text: "Pick one or more tests on the left to chart them." })); return; }
     const start = startOf();
     const allPts = selected.flatMap(t => byTest.get(t) || []).filter(p => !start || p.d >= start);
     const xr = allPts.length ? [start || allPts.reduce((m, p) => p.d < m ? p.d : m, allPts[0].d), new Date().toISOString().slice(0, 10)] : null;
     box.replaceChildren(...selected.filter(t => byTest.has(t)).map(t => labCard(t, byTest.get(t), xr, start)));
   }
-  $("#test-filter").addEventListener("input", drawList);
-  $("#lab-events").addEventListener("change", draw);
-  $("#lab-clear").addEventListener("click", () => { selected = []; labTopic = null; store.set("labsel", selected); store.set("labtopic", null); drawTopics(); drawList(); draw(); });
+  $("#test-filter").oninput = () => { drawList(); rememberView(); };
+  $("#lab-events").onchange = () => { draw(); rememberView(); };
+  $("#lab-clear").onclick = () => { selected = []; labTopic = null; store.set("labsel", selected); store.set("labtopic", null); drawTopics(); drawList(); draw(); rememberView(); };
   drawTopics(); drawList(); draw();
 }
 
@@ -592,8 +774,9 @@ function labCard(test, allPts, xr, start) {
     h("h2", null, `${test}${units.length === 1 ? ` (${units[0]})` : ""}`, " ", ...topicTags(tnames)),
     h("p", { class: "sub", text: `${pts.length} result${pts.length === 1 ? "" : "s"} · ${years}${refNote(allPts)}${units.length > 1 ? " · mixed units: " + units.join(", ") : ""}` }));
   if (num.length) {
-    const chart = h("div", { class: "chart" });
-    card.append(chart);
+    const chart = h("div", { class: "chart", "data-test": test, role: "img", "aria-label": `${test} trend chart. Exact results are available in Values below.` });
+    const controls = chartControls(`lab:${test}`, test, xr || [num[0].d, num.at(-1).d]);
+    card.append(controls.form, chart);
     const ref = [...num].reverse().find(p => p.lo != null || p.hi != null);
     const traces = [];
     const flags = num.map(computedFlag);
@@ -610,19 +793,22 @@ function labCard(test, allPts, xr, start) {
     const shapes = ev.shapes.slice();
     if (ref && ref.lo != null && ref.hi != null) shapes.unshift({ type: "rect", xref: "paper", x0: 0, x1: 1, y0: ref.lo, y1: ref.hi, fillcolor: cssVar("--band"), line: { width: 0 }, layer: "below" });
     else if (ref) { const y = ref.hi != null ? ref.hi : ref.lo; shapes.unshift({ type: "line", xref: "paper", x0: 0, x1: 1, y0: y, y1: y, line: { color: cssVar("--muted"), width: 1 }, layer: "below" }); }
-    requestAnimationFrame(() => Plotly.newPlot(chart, traces, baseLayout({ height: 240, margin: { l: matchMedia("(max-width: 600px)").matches ? 42 : 52, r: 8, t: 16, b: 30 }, xaxis: xr ? { range: xr } : {}, shapes, annotations: ev.annotations }), plotConfig));
+    requestAnimationFrame(() => Plotly.newPlot(chart, traces, baseLayout({ height: 240, margin: { l: matchMedia("(max-width: 600px)").matches ? 42 : 52, r: 8, t: 16, b: 30 }, xaxis: { range: controls.range }, shapes, annotations: ev.annotations }), plotConfig).then(() => controls.bind(chart)));
+    if ($("#lab-events").checked) card.append(h("details", null, h("summary", { text: "Marked events" }),
+      h("ul", { class: "plain" }, DATA.events.filter(e => ["Diagnoses", "Treatments", "Surgery & procedures", "Milestones"].includes(e.lane) && (!xr || e.date >= xr[0] && e.date <= xr[1])).map(e => h("li", null,
+        h("button", { class: "linkbtn", text: `${fmtDate(e.date)} · ${e.title} · ${e.lane}`, onclick: () => { showTab("overview"); showEvent(e); $("#event-detail").focus(); } }))))));
   } else {
     card.append(h("p", { class: "muted", text: "Text results — shown in the table below, not charted." }));
   }
   card.append(h("details", { open: !num.length },
     h("summary", { text: `Values (${pts.length})` }),
-    h("table", null,
-      h("thead", null, h("tr", null, h("th", { text: "Date" }), h("th", { class: "num", text: "Value" }), h("th", { text: "Units" }), h("th", { text: "Reference" }), h("th", { text: "Flag" }), h("th", { text: "Source" }))),
+    h("table", null, h("caption", { text: `${test}: source results and details` }),
+      h("thead", null, h("tr", null, h("th", { text: "Date" }), h("th", { class: "num", text: "Value" }), h("th", { text: "Units" }), h("th", { text: "Reference" }), h("th", { text: "Flag" }), h("th", { text: "Source" }), h("th", { text: "Order / comments" }))),
       h("tbody", null, pts.slice().reverse().map(p => {
         const f = computedFlag(p);
-        return h("tr", { title: p.cm || "", class: f ? "abn" : "" }, h("td", { text: fmtDate(p.d) }), h("td", { class: "num", text: p.v != null ? (p.c || "") + fmtNum(p.v) : p.vt }),
+        return h("tr", { class: f ? "abn" : "" }, h("td", { text: fmtDate(p.d) }), h("td", { class: "num", text: p.v != null ? (p.c || "") + fmtNum(p.v) : p.vt }),
           h("td", { text: p.u || "" }), h("td", { text: rangeText(p) }), h("td", null, f ? h("span", { class: "flag " + flagClass(f), text: flagLabel(f) }) : ""),
-          h("td", null, srcPill(p.o)));
+          h("td", null, srcPill(p.o)), h("td", null, p.on ? h("div", { text: p.on }) : null, p.cm ? h("div", { text: p.cm }) : null));
       })))));
   return card;
 }
@@ -677,26 +863,10 @@ function withGaps(rs, days) {
 function diabetesCard(by, xr, start) {
   const group = h("div", { class: "card diabetes-dashboard" },
     h("h2", { text: "Diabetes · glucose & insulin" }),
-    h("p", { class: "sub", text: "Glucose in blue · basal insulin in pink · bolus in orange. Daily summaries on the same dates. Drag either chart to zoom both; double-click to reset." }));
+    h("p", { class: "sub", text: "Glucose in blue · basal insulin in pink · bolus in orange. Daily summaries on the same dates. Date controls and zoom apply to both charts." }));
   const pair = h("div", { class: "diabetes-pair" });
-  const charts = [];
-  let syncing = false;
-  const link = chart => {
-    charts.push(chart);
-    if (charts.length !== 2) return;
-    for (const source of charts) source.on("plotly_relayout", event => {
-      if (syncing || !group.isConnected) return;
-      const reset = event["xaxis.autorange"] === true;
-      const range = reset ? xr : event["xaxis.range"] ||
-        (event["xaxis.range[0]"] != null && event["xaxis.range[1]"] != null
-          ? [event["xaxis.range[0]"], event["xaxis.range[1]"]] : null);
-      if (!range) return; // resizing and y-only changes should not move the shared date window
-      syncing = true;
-      const targets = reset ? charts : charts.filter(target => target !== source);
-      Promise.all(targets.map(target => Plotly.relayout(target, { "xaxis.range": range, "xaxis.autorange": false })))
-        .finally(() => { syncing = false; });
-    });
-  };
+  const controls = chartControls("vital:diabetes", "Glucose and insulin", xr);
+  group.append(controls.form);
   const visible = metric => (by.get(metric) || []).filter(r => !start || r.date >= start);
   const insulinSeries = [
     ["Basal", visible("Insulin basal"), "--insulin-basal"],
@@ -712,7 +882,7 @@ function diabetesCard(by, xr, start) {
     ["insulin", "Insulin delivered · daily totals", "U", insulinSeries, false],
   ]) {
     const panel = series.length
-      ? vitalCard(title, unit, series, xr, minMax, link)
+      ? vitalCard(title, unit, series, xr, minMax, controls)
       : h("div", { class: "card empty" }, h("h2", { text: `${title} (${unit})` }),
           h("p", { text: `No ${metric} data in this date range.` }));
     panel.setAttribute("data-diabetes-metric", metric);
@@ -722,15 +892,27 @@ function diabetesCard(by, xr, start) {
   group.append(pair);
   return group;
 }
-function vitalCard(title, unit, series, xr, minMax, onReady) {
+function vitalCard(title, unit, series, xr, minMax, sharedControls) {
   const dates = [...new Set(series.flatMap(([, records]) => records.map(r => r.date)))].sort();
   const n = dates.length;
   const dense = n > 120;
   const card = h("div", { class: "card" }, h("h2", { text: `${title} (${unit})` }),
     h("p", { class: "sub", text: `${n.toLocaleString()} days with data · ${fmtDate(dates[0])} – ${fmtDate(dates[n - 1])}${dense ? " · thin line = daily, thick = 30-day average" : ""}${minMax ? " · wash = daily min–max" : ""}` }));
-  if (series.length > 1 || onReady) card.append(h("div", { class: "legend" }, series.map(([name, , color]) => h("span", null, h("i", { style: `border-color:${cssVar(color)}` }), name))));
-  const chart = h("div", { class: "chart" });
+  if (series.length > 1 || sharedControls) card.append(h("div", { class: "legend" }, series.map(([name, , color]) => h("span", null, h("i", { style: `border-color:${cssVar(color)}` }), name))));
+  const chart = h("div", { class: "chart", role: "img", "aria-label": `${title} trend chart. Daily summaries are available in Values below.` });
+  const controls = sharedControls || chartControls(`vital:${title}`, title, xr);
+  if (!sharedControls) card.append(controls.form);
   card.append(chart);
+  card.append(h("details", null, h("summary", { text: "Values: daily summaries" }),
+    h("table", null, h("caption", { text: `${title} · ${unit}` }),
+      h("thead", null, h("tr", null, ...["Date", "Series", "Value", "Minimum", "Maximum", "30-day average"].map(text => h("th", { scope: "col", text })))),
+      h("tbody", null, series.flatMap(([name, rs]) => {
+        const real = rs.filter(r => r.value != null), avg = rolling(real.map(r => r.date), real.map(r => r.value), 30);
+        return real.map((r, i) => h("tr", null,
+        h("td", { text: fmtDate(r.date) }), h("td", { text: name }), h("td", { text: fmtNum(r.value) }),
+        h("td", { text: r.min == null ? "—" : fmtNum(r.min) }), h("td", { text: r.max == null ? "—" : fmtNum(r.max) }),
+        h("td", { text: dense ? fmtNum(avg[i]) : "—" }))).reverse();
+      })))));
   const traces = [];
   for (const [name, raw, color, dash] of series) {
     const rs = withGaps(raw, 14);
@@ -757,8 +939,8 @@ function vitalCard(title, unit, series, xr, minMax, onReady) {
     if (dense) traces.push({ type: "scatter", mode: "lines", x, y: rs.map(r => r.value == null ? null : avg[k++]), name: name + " (30-day avg)", line: { width: 2, color: cssVar(color), dash },
       hovertemplate: `<b>%{y} ${unit}</b> 30-day avg<br>%{x|%b %d, %Y}<extra></extra>` });
   }
-  requestAnimationFrame(() => Plotly.newPlot(chart, traces, baseLayout({ height: 220, xaxis: { range: xr } }), plotConfig)
-    .then(() => { if (onReady) onReady(chart); }));
+  requestAnimationFrame(() => Plotly.newPlot(chart, traces, baseLayout({ height: 220, xaxis: { range: controls.range } }), plotConfig)
+    .then(() => controls.bind(chart)));
   return card;
 }
 
@@ -767,32 +949,35 @@ const KINDS = [["all", "All"], ["journal", "My journal"], ["note", "Clinical not
 let recState = { q: "", kind: store.get("reckind", "all"), src: "all", topic: store.get("rectopic", null), current: null };
 function drawRecTopics() {
   $("#rec-topics").replaceChildren(...(TOPICS.length ? [h("span", { class: "muted", text: "Topic:" }),
-    h("button", { class: "chip", "aria-pressed": !recState.topic, text: "Any", onclick: () => { recState.topic = null; store.set("rectopic", null); drawRecTopics(); drawResults(); } }),
-    ...TOPICS.map(t => h("button", { class: "chip topic", style: `--tc: var(--c-${topicColor(t.name)})`, "aria-pressed": recState.topic === t.name, text: `${t.name} ${t.docs.length}`, onclick: () => { recState.topic = t.name; store.set("rectopic", t.name); drawRecTopics(); drawResults(); } }))] : []));
+    h("button", { class: "chip", "aria-pressed": !recState.topic, text: "Any", onclick: () => { recState.topic = null; store.set("rectopic", null); drawRecTopics(); refreshRecords(); $("#rec-topics [aria-pressed=\"true\"]")?.focus(); } }),
+    ...TOPICS.map(t => h("button", { class: "chip topic", style: `--tc: var(--c-${topicColor(t.name)})`, "aria-pressed": recState.topic === t.name, text: `${t.name} ${matchDocs({ topic: t.name }).length}`, onclick: () => { recState.topic = t.name; store.set("rectopic", t.name); drawRecTopics(); refreshRecords(); $("#rec-topics [aria-pressed=\"true\"]")?.focus(); } }))] : []));
   revealPressed($("#rec-topics"));
 }
 function renderRecords() {
   const srcSel = $("#rec-src");
   srcSel.replaceChildren(h("option", { value: "all", text: "All sources" }), ...[...new Set(DATA.docs.map(d => d.o))].map(o => h("option", { value: o, text: o })));
-  srcSel.addEventListener("change", () => { recState.src = srcSel.value; drawResults(); });
-  $("#rec-q").addEventListener("input", e => { recState.q = e.target.value; drawResults(); });
+  srcSel.value = recState.src;
+  srcSel.onchange = () => { recState.src = srcSel.value; refreshRecords(); };
+  $("#rec-q").oninput = e => { recState.q = e.target.value; refreshRecords(); };
   $("#rec-q").value = recState.q;
   drawRecTopics(); drawKinds(); drawResults();
-  if (recState.current) openDoc(recState.current);
+  if (recState.current) renderReader(recState.current);
+  else clearReader();
 }
 function drawKinds() {
   $("#rec-kinds").replaceChildren(...KINDS.flatMap(([k, label]) => {
-    const n = k === "all" ? DATA.docs.length : DATA.docs.filter(d => d.k === k).length;
-    return n ? [h("button", { class: "chip", style: k === "all" ? "" : `--kc: var(--c-${KIND_COLOR[k] || "blue"})`, "aria-pressed": recState.kind === k, onclick: () => { recState.kind = k; store.set("reckind", k); drawKinds(); drawResults(); } }, k === "all" ? null : h("i", { class: "sw" }), `${label} ${n}`)] : [];
+    const n = matchDocs({ kind: k }).length;
+    return n || k === recState.kind || k === "all" ? [h("button", { class: "chip", style: k === "all" ? "" : `--kc: var(--c-${KIND_COLOR[k] || "blue"})`, "aria-pressed": recState.kind === k, onclick: () => { recState.kind = k; store.set("reckind", k); drawKinds(); refreshRecords(); $("#rec-kinds [aria-pressed=\"true\"]")?.focus(); } }, k === "all" ? null : h("i", { class: "sw" }), `${label} ${n}`)] : [];
   }));
   revealPressed($("#rec-kinds"));
 }
 function terms() { return recState.q.toLowerCase().split(/\s+/).filter(t => t.length > 1); }
 const TODAY = new Date().toISOString().slice(0, 10);
-function matchDocs() {
+function matchDocs(overrides = {}) {
+  const state = { ...recState, ...overrides };
   const ts = terms();
-  const hits = DATA.docs.filter(d => (recState.kind === "all" || d.k === recState.kind) && (recState.src === "all" || d.o === recState.src) &&
-    (!recState.topic || (docTopics.get(d.id) || []).includes(recState.topic)) &&
+  const hits = DATA.docs.filter(d => (state.kind === "all" || d.k === state.kind) && (state.src === "all" || d.o === state.src) &&
+    (!state.topic || (docTopics.get(d.id) || []).includes(state.topic)) &&
     ts.every(t => (d.ti || "").toLowerCase().includes(t) || d.x.toLowerCase().includes(t)));
   // newest first, but placeholders for scheduled visits (dated in the future) go last
   return hits.filter(d => !d.d || d.d <= TODAY).concat(hits.filter(d => d.d && d.d > TODAY).reverse());
@@ -811,23 +996,60 @@ function highlight(text, ts) {
 const KIND_LABEL = Object.fromEntries(KINDS);
 function drawResults() {
   const docs = matchDocs();
+  if (recState.current != null && !docs.some(d => d.id === recState.current)) clearReader();
   const ts = terms();
   const list = $("#rec-list");
+  $("#view-status").textContent = `${docs.length} matching records`;
+  drawRecordContext();
   list.replaceChildren(h("div", { class: "muted", style: "padding:4px 8px 8px", text: `${docs.length} record${docs.length === 1 ? "" : "s"}${docs.length > 300 ? " (showing 300 newest)" : ""}` }),
-    ...docs.slice(0, 300).map(d => h("button", { class: "result", style: `--kc: var(--c-${KIND_COLOR[d.k] || "blue"})`, "aria-current": recState.current === d.id, onclick: () => openDoc(d.id) },
+    ...docs.slice(0, 300).map(d => h("button", { class: "result", style: `--kc: var(--c-${KIND_COLOR[d.k] || "blue"})`, "data-record-id": d.id, "aria-current": recState.current === d.id, onclick: () => openDoc(d.id) },
       h("div", { class: "row" }, h("span", { class: "kind", text: KIND_LABEL[d.k] || d.k }), h("b", { text: d.ti || "(untitled)" })),
       h("div", { class: "meta" }, fmtDate(d.d), d.d && d.d > TODAY ? h("span", { class: "pill", text: "scheduled" }) : null, " · ", srcPill(d.o), d.a ? ` · ${d.a}` : ""),
       docTopics.has(d.id) ? h("div", { class: "tags" }, ...topicTags(docTopics.get(d.id))) : null,
       h("div", { class: "snip" }, highlight(snippet(d.x, ts), ts)))));
 }
-$("#back-results").addEventListener("click", () => {
+function clearReader() {
+  recState.current = null;
   $(".records-layout").classList.remove("viewing-record");
-  $("#rec-list").scrollIntoView({ block: "start" });
+  $("#back-results").hidden = true;
+  $("#reader-content").replaceChildren(h("div", { class: "empty", text: "Select a matching record to read it." }));
+}
+function refreshRecords() {
+  drawRecTopics(); drawKinds(); drawResults(); rememberView();
+}
+function drawRecordContext() {
+  const filters = [];
+  const add = (label, change) => filters.push(h("button", { class: "chip filter-chip", text: label + " ×", "aria-label": "Remove filter: " + label, onclick: () => { change(); $("#rec-q").value = recState.q; $("#rec-src").value = recState.src; drawRecTopics(); drawKinds(); refreshRecords(); $("#rec-context h2").focus(); } }));
+  if (recState.topic) add("Topic: " + recState.topic, () => { recState.topic = null; store.set("rectopic", null); });
+  if (recState.kind !== "all") add("Type: " + KIND_LABEL[recState.kind], () => { recState.kind = "all"; store.set("reckind", "all"); });
+  if (recState.src !== "all") add("Source: " + recState.src, () => { recState.src = "all"; });
+  if (recState.q) add("Search: " + recState.q, () => { recState.q = ""; });
+  $("#rec-context").replaceChildren(
+    h("div", { class: "context-heading" }, h("h2", { tabindex: -1, text: recState.topic ? `${recState.topic} · Records` : "Records" }), contextActions(recState.topic, "records")),
+    h("div", { class: "active-filters", "aria-label": "Active record filters" }, filters.length ? filters : h("span", { class: "sub", text: "All records · All sources" }),
+      filters.length ? h("button", { class: "chip", text: "Clear all filters", onclick: () => searchRecords("") }) : null));
+}
+$("#back-results").addEventListener("click", () => {
+  const id = recState.current;
+  rememberView(); clearReader(); drawResults(); saveView();
+  $("#rec-list").scrollTop = recState.listScroll || 0;
+  window.scrollTo(0, recState.listPageScroll || 0);
+  $(`#rec-list [data-record-id="${id}"]`)?.focus({ preventScroll: true });
 });
 function openDoc(id) {
-  if (!rendered.records) { recState.current = id; showTab("records"); return; }
-  showTab("records");
+  rememberView();
+  if (!matchDocs().some(d => d.id === id)) {
+    recState = { q: "", kind: "all", src: "all", topic: null, current: null };
+    rendered.records = false;
+  }
+  recState.listScroll = $("#rec-list").scrollTop;
+  recState.listPageScroll = window.scrollY;
   recState.current = id;
+  showTab("records", true);
+  renderReader(id); saveView();
+  $("#reader-content").focus({ preventScroll: true });
+}
+function renderReader(id) {
   const d = DATA.docs.find(x => x.id === id);
   if (!d) return;
   const ts = terms();
@@ -837,6 +1059,7 @@ function openDoc(id) {
     h("div", { class: "muted" }, fmtDate(d.d), " · ", srcPill(d.o), d.a ? ` · ${d.a}` : "", d.dp ? ` · ${d.dp}` : "", enc ? ` · visit: ${enc.type}` : "", " ", ...topicTags(docTopics.get(d.id))),
     ["file:", "hp:"].includes(location.protocol) && d.p && !d.p.includes("!") ? h("div", { style: "margin-top:6px" }, h("a", { href: d.p, target: "_blank", rel: "noopener", text: "Open original file" })) : null,
     h("div", { class: "body" }, d.x ? highlight(d.x, ts) : h("span", { class: "muted", text: "No text extracted (image or scanned file) — open the original." })));
+  $("#back-results").hidden = false;
   drawResults();
   const reader = $("#reader"), first = $("#reader mark");
   reader.scrollTop = first ? first.offsetTop - reader.offsetTop - reader.clientHeight / 3 : 0;
@@ -846,9 +1069,10 @@ function openDoc(id) {
   }
 }
 function searchRecords(q) {
+  rememberView(); clearReader(); recState.src = "all";
   $(".records-layout").classList.remove("viewing-record");
   recState.q = q; recState.kind = "all"; recState.topic = null; store.set("reckind", "all"); store.set("rectopic", null);
-  if (rendered.records) { $("#rec-q").value = q; drawRecTopics(); drawKinds(); drawResults(); }
+  if (rendered.records) { $("#rec-q").value = q; $("#rec-src").value = "all"; drawRecTopics(); drawKinds(); drawResults(); }
   showTab("records");
 }
 
@@ -859,10 +1083,11 @@ window.addEventListener("message", event => {
   if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
   else document.documentElement.removeAttribute("data-theme");
   for (const k of Object.keys(rendered)) rendered[k] = false;
-  showTab(store.get("tab", "overview"));
+  showTab(store.get("tab", "overview"), true);
 });
-showTab(store.get("tab", "overview"));
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { for (const k of Object.keys(rendered)) rendered[k] = false; showTab(store.get("tab", "overview")); });
+showTab(store.get("tab", "overview"), true);
+saveView(true);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { for (const k of Object.keys(rendered)) rendered[k] = false; showTab(store.get("tab", "overview"), true); });
 </script>
 </body>
 </html>

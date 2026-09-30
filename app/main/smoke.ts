@@ -5,6 +5,7 @@ import { chmodSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { delay } from "./proc";
+import { runAccessibilitySmoke } from "./accessibility-smoke";
 
 const TABS = ["dashboard", "import", "build", "events", "notes", "doctor"];
 
@@ -13,6 +14,10 @@ function writePrivateScreenshot(file: string, data: Buffer): void {
 }
 
 export async function runSmoke(window: BrowserWindow): Promise<void> {
+  // This window is isolated and contains only the fictional demo/sentinel fixture.
+  window.webContents.on("console-message", details => {
+    if (details.message.includes("Error")) process.stdout.write(`fixture renderer: ${details.message}\n`);
+  });
   const outDir = mkdtempSync(join(tmpdir(), "clippi-health-smoke-"));
   chmodSync(outDir, 0o700);
   process.stdout.write(`saving private smoke screenshots in ${outDir}\n`);
@@ -34,6 +39,14 @@ export async function runSmoke(window: BrowserWindow): Promise<void> {
   }
   if (!ready) throw new Error("The Demo button did not load Sally Seastar");
   process.stdout.write("Demo button loaded Sally Seastar in an isolated store.\n");
+  if (process.argv.includes("--smoke-accessibility-only")) {
+    window.webContents.send("tab", "dashboard"); await delay(500);
+    const frame = window.webContents.mainFrame.frames.find(frame => frame.url.startsWith("hp://root/"));
+    if (!frame) throw new Error("Demo dashboard frame is missing");
+    await runAccessibilitySmoke(window, frame, outDir);
+    await restoreDemo(window, originalRoot);
+    return;
+  }
   for (const tab of TABS) {
     window.webContents.send("tab", tab);
     await delay(1500); // the dashboard iframe inlines Plotly, so give it a paint
@@ -145,6 +158,78 @@ export async function runSmoke(window: BrowserWindow): Promise<void> {
   await delay(500);
   writePrivateScreenshot(join(outDir, "demo-labs.png"), (await window.webContents.capturePage()).toPNG());
   process.stdout.write(`Demo chart data and zoom passed: ${JSON.stringify(sample)}\n`);
+  const accessibility = await dashboard.executeJavaScript(`(async () => {
+    const checks = {};
+    const firstTopic = TOPICS[0].name;
+    showRecordsFor(firstTopic);
+    checks.topicContext = document.querySelector("#rec-context h2").textContent.includes(firstTopic);
+    checks.pressedTopic = document.querySelectorAll('#rec-topics [aria-pressed="true"]').length === 1;
+    const source = document.querySelector("#rec-src");
+    source.selectedIndex = 1; source.dispatchEvent(new Event("change"));
+    showRecordsFor(firstTopic);
+    checks.freshTopicSource = source.value === "all";
+    const firstResult = document.querySelector("#rec-list .result");
+    firstResult.click();
+    checks.selectedRecord = document.querySelectorAll('#rec-list [aria-current="true"]').length === 1;
+    checks.readerFocus = document.activeElement.id === "reader-content";
+    const query = document.querySelector("#rec-q");
+    query.value = "zz-no-fictional-match-zz"; query.dispatchEvent(new Event("input"));
+    checks.readerCleared = !document.querySelector("#reader-content h2") && !document.querySelector("#rec-list .result");
+    checks.resultStatus = document.querySelector("#view-status").textContent === "0 matching records";
+    showRecordsFor(firstTopic);
+    document.querySelector("#rec-list .result").click();
+    document.querySelector("#tabs [data-tab='labs']").click();
+    document.querySelector("#tabs [data-tab='records']").click();
+    checks.readerRetained = !!document.querySelector("#reader-content h2") && document.querySelector(".records-layout").classList.contains("viewing-record");
+    document.querySelector("#back-results").click();
+    checks.backToResults = !document.querySelector(".records-layout").classList.contains("viewing-record") && document.activeElement.classList.contains("result");
+    showLabsFor(firstTopic);
+    checks.chartContext = document.querySelector("#lab-context h2").textContent.includes(firstTopic);
+    checks.rangeSelected = document.querySelectorAll('#lab-range [aria-pressed="true"]').length === 1;
+    checks.testsSelected = document.querySelectorAll('#testlist [aria-pressed="true"]').length === TOPICS[0].chart_tests.length;
+    document.querySelector("#lab-context .filter-chip").click();
+    checks.customTopicRetained = document.querySelector("#lab-context h2").textContent.includes(firstTopic);
+    const labsTab = document.querySelector("#tabs [data-tab='labs']");
+    labsTab.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    checks.keyboardTabs = document.activeElement.dataset.tab === "vitals" && document.activeElement.getAttribute("aria-selected") === "true";
+    checks.singleTabStop = document.querySelectorAll('#tabs button[tabindex="0"]').length === 1;
+    checks.chartValues = !!document.querySelector("#vitals details table caption");
+    showTab("overview");
+    checks.timelineAlternative = document.querySelectorAll("#timeline-events button").length === DATA.events.length;
+    checks.labels = !!document.querySelector('#rec-q[aria-label]') && !!document.querySelector('#test-filter[aria-label]');
+    const from = activeTab;
+    document.querySelector("#tabs [data-tab='records']").click();
+    await new Promise(resolve => { window.addEventListener("popstate", resolve, { once: true }); history.back(); });
+    checks.browserBack = activeTab === from;
+    return checks;
+  })()`) as Record<string, boolean>;
+  if (!Object.values(accessibility).every(Boolean)) throw new Error(`Dashboard accessibility/navigation failed: ${JSON.stringify(accessibility)}`);
+  process.stdout.write(`Dashboard accessibility/navigation passed ${Object.keys(accessibility).length} checks.\n`);
+  writePrivateScreenshot(join(outDir, "demo-accessibility-overview.png"), (await window.webContents.capturePage()).toPNG());
+  await window.webContents.executeJavaScript('document.getElementById("dashboard").style.width = "320px"');
+  await delay(300);
+  const narrow = await dashboard.executeJavaScript(`(() => {
+    const checks = {};
+    showRecordsFor(TOPICS[0].name);
+    checks.reflow = document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1;
+    document.querySelector("#rec-list .result").click();
+    checks.reader = document.querySelector(".records-layout").classList.contains("viewing-record") && !document.querySelector("#back-results").hidden;
+    document.querySelector("#back-results").click();
+    checks.listFocus = document.activeElement.classList.contains("result");
+    showLabsFor(TOPICS[0].name);
+    checks.chartReflow = document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1;
+    checks.contextVisible = !!document.querySelector("#lab-context h2").getClientRects().length;
+    return checks;
+  })()`) as Record<string, boolean>;
+  if (!Object.values(narrow).every(Boolean)) throw new Error(`320px dashboard checks failed: ${JSON.stringify(narrow)}`);
+  writePrivateScreenshot(join(outDir, "demo-accessibility-narrow.png"), (await window.webContents.capturePage()).toPNG());
+  await window.webContents.executeJavaScript('document.getElementById("dashboard").style.width = ""');
+  process.stdout.write(`320px dashboard passed ${Object.keys(narrow).length} checks.\n`);
+  await runAccessibilitySmoke(window, dashboard, outDir);
+  await restoreDemo(window, originalRoot);
+}
+
+async function restoreDemo(window: BrowserWindow, originalRoot: string): Promise<void> {
   const returned = await window.webContents.executeJavaScript(`(async () => {
     const result = await window.hp.setDemo(false);
     const state = await window.hp.state();

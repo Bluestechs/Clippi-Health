@@ -137,6 +137,7 @@ function appendLog(line: string): void {
 function showTab(name: string): void {
   for (const button of document.querySelectorAll<HTMLButtonElement>("#tabs button")) {
     button.setAttribute("aria-selected", String(button.dataset.tab === name));
+    button.tabIndex = button.dataset.tab === name ? 0 : -1;
   }
   for (const section of document.querySelectorAll<HTMLElement>("main section")) {
     section.hidden = section.id !== `tab-${name}`;
@@ -497,7 +498,8 @@ function renderEvents(): void {
   const head = document.createElement("tr");
   for (const column of [...EVENT_COLUMNS, ""]) {
     const th = document.createElement("th");
-    th.textContent = column;
+    th.textContent = column || "Actions";
+    th.scope = "col";
     head.append(th);
   }
   const rows = events.map((event, index) => {
@@ -506,6 +508,7 @@ function renderEvents(): void {
       const td = document.createElement("td");
       if (column === "lane") {
         const select = document.createElement("select");
+        select.setAttribute("aria-label", `Event ${index + 1}: ${column}`);
         for (const lane of ["", ...LANES]) {
           const option = document.createElement("option");
           option.value = lane;
@@ -520,6 +523,7 @@ function renderEvents(): void {
       } else {
         const input = document.createElement("input");
         input.value = event[column] ?? "";
+        input.setAttribute("aria-label", `Event ${index + 1}: ${column}`);
         input.oninput = () => {
           event[column] = input.value;
         };
@@ -531,9 +535,11 @@ function renderEvents(): void {
     const remove = document.createElement("button");
     remove.className = "ghost danger";
     remove.textContent = "×";
+    remove.setAttribute("aria-label", `Remove event ${index + 1}`);
     remove.onclick = () => {
       events.splice(index, 1);
       renderEvents();
+      el("events-add").focus();
     };
     actions.append(remove);
     tr.append(actions);
@@ -606,16 +612,32 @@ window.hp.onTab(showTab);
 
 for (const button of document.querySelectorAll<HTMLButtonElement>("#tabs button")) {
   button.onclick = () => showTab(button.dataset.tab ?? "dashboard");
+  button.tabIndex = button.getAttribute("aria-selected") === "true" ? 0 : -1;
+  button.onkeydown = (event) => {
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>("#tabs button")];
+    const index = buttons.indexOf(button);
+    const next = event.key === "ArrowRight" ? (index + 1) % buttons.length : event.key === "ArrowLeft" ? (index + buttons.length - 1) % buttons.length : event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : null;
+    if (next == null) return;
+    event.preventDefault(); buttons[next]?.click(); buttons[next]?.focus();
+  };
 }
 
 el("log-toggle").onclick = () => {
   const log = el("log");
   log.hidden = !log.hidden;
+  el("log-toggle").setAttribute("aria-expanded", String(!log.hidden));
 };
 
 const savedTheme = localStorage.getItem("healthpilot-theme");
 applyTheme(isTheme(savedTheme) ? savedTheme : "system");
 el("theme-toggle").onclick = () => setThemeMenu(el("theme-menu").hidden);
+el("theme-menu").onkeydown = (event) => {
+  const buttons = [...el("theme-menu").querySelectorAll<HTMLButtonElement>("button")];
+  const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+  const next = event.key === "ArrowDown" ? (index + 1) % buttons.length : event.key === "ArrowUp" ? (index + buttons.length - 1) % buttons.length : event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : null;
+  if (next == null) return;
+  event.preventDefault(); buttons[next]?.focus();
+};
 for (const button of document.querySelectorAll<HTMLButtonElement>("[data-theme-value]")) {
   button.onclick = () => {
     const theme = button.dataset.themeValue ?? null;

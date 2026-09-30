@@ -1,8 +1,10 @@
 # Clippi-Health progress
 
-Updated 2026-09-29.
+Updated 2026-09-30.
 
 ## Working now
+
+- Accessibility improvements cover keyboard tabs, named controls and status, skip links, record-reader focus and history, chart date controls, text equivalents, and sampled contrast/reflow fixes. The target is WCAG 2.2 AA; conformance is not yet claimed. See `docs/ACCESSIBILITY.md` for measured evidence and limitations.
 
 - Vitals pairs CGM and insulin side by side with linked zoom/reset. Basal insulin is pink and bolus orange in both themes, using delivery-reason metadata from Apple Health. Missing types remain unspecified; daily subtype totals stay with the selected source's combined total. A cache-version change reparses older exports on rebuild.
 
@@ -29,6 +31,7 @@ Updated 2026-09-29.
 
 ## Release work remaining
 
+- Complete manual pointer/tooltip and full-workflow accessibility checks, native Windows/Linux zoom and contrast checks, VoiceOver/NVDA/Linux screen-reader assessment, and a synthetic accessibility gate in CI. Track these in issues #7–#9.
 - Complete Epic registration for a Clippi-Health production public client id, then validate the BJC connection end to end.
 - Submit Quest's FHIR API request and contact Labcorp about third-party patient-facing FHIR registration, then validate any offered local public-client flow before enabling it.
 - Create and export an Apple Developer ID Application certificate, add the notarization credentials to GitHub, and validate the signed release on both Mac architectures.
@@ -40,4 +43,4 @@ Updated 2026-09-29.
 
 ## Verification
 
-The current source catalog passes 31 Python unit tests, Electron type checking, 55 Electron component tests, the distribution PII audit, and the production-dependency audit. The bundled native engine passed build/query/connector checks from a clean data directory and generation/rebuild of the populated Sally Seastar demo. Both source and packaged desktop smoke runs passed all tabs, both explicit themes and CGM chart zoom checks using disposable profiles. GitHub Actions run 36618736252 built and verified DMG/ZIP artifacts for both Mac architectures, a Windows Squirrel installer, and Linux DEB/ZIP artifacts from commit `ed4c846`. A locally built macOS Apple Silicon app also passed strict bundle-signature verification and full UI screenshot smoke coverage across every tab and both explicit themes. Evaluation macOS artifacts are ad-hoc signed and Windows artifacts are unsigned until production credentials are configured.
+The current source catalog passes 31 Python unit tests, Electron type checking, 55 Electron component tests, the distribution PII audit, and the production-dependency audit. The isolated fictional Electron smoke also passes 19 accessibility/navigation checks, 5 narrow-dashboard checks, 15 chart-control checks, and 73 sampled visual conditions in an ordinary-color run. Screen-reader behavior and complete WCAG conformance remain unverified. The bundled native engine passed build/query/connector checks from a clean data directory and generation/rebuild of the populated Sally Seastar demo. Both source and packaged desktop smoke runs passed all tabs, both explicit themes and CGM chart zoom checks using disposable profiles. GitHub Actions run 36618736252 built and verified DMG/ZIP artifacts for both Mac architectures, a Windows Squirrel installer, and Linux DEB/ZIP artifacts from commit `ed4c846`. A locally built macOS Apple Silicon app also passed strict bundle-signature verification and full UI screenshot smoke coverage across every tab and both explicit themes. Evaluation macOS artifacts are ad-hoc signed and Windows artifacts are unsigned until production credentials are configured.
