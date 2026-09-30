@@ -197,6 +197,19 @@ export async function runSmoke(window: BrowserWindow): Promise<void> {
     showTab("overview");
     checks.timelineAlternative = document.querySelectorAll("#timeline-events button").length === DATA.events.length;
     checks.labels = !!document.querySelector('#rec-q[aria-label]') && !!document.querySelector('#test-filter[aria-label]');
+    const card = label => [...document.querySelectorAll("#tiles button")].find(b => b.textContent.includes(label));
+    checks.actionableCards = document.querySelectorAll("#tiles button").length === 4;
+    card("Documented visits").click();
+    checks.visitsCard = !document.querySelector("#visits-card").hidden &&
+      document.activeElement.id === "visits-heading" &&
+      document.querySelectorAll("#visit-list tbody tr").length === DATA.encounters.filter(e => e.date && e.date <= new Date().toISOString().slice(0, 10)).length;
+    card("Clinical notes").click();
+    checks.notesCard = activeTab === "records" && recState.kind === "note" && recState.q === "" && recState.topic === null;
+    showTab("overview"); card("All records").click();
+    checks.recordsCard = activeTab === "records" && recState.kind === "all" && matchDocs().length === DATA.docs.length;
+    showTab("overview"); card("All lab results").click();
+    checks.labsCard = activeTab === "labs" && store.get("labtopic", null) === null && store.get("labrange", "All") === "All";
+    showTab("overview");
     const from = activeTab;
     document.querySelector("#tabs [data-tab='records']").click();
     await new Promise(resolve => { window.addEventListener("popstate", resolve, { once: true }); history.back(); });

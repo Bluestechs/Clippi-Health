@@ -39,6 +39,9 @@ class DemoDataTests(unittest.TestCase):
             result = subprocess.run([sys.executable, str(REPO / "healthpilot.py")], cwd=root,
                                     env=env, capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
+            dashboard = (root / "dashboard.html").read_text(encoding="utf-8")
+            self.assertIn('<img class="brand-logo" src="data:image/png;base64,', dashboard)
+            self.assertNotIn("__LOGO_BASE64__", dashboard)
             with sqlite3.connect(root / "data/health.db") as db:
                 patient = json.loads(db.execute("SELECT value FROM meta WHERE key='patient'").fetchone()[0])
                 self.assertEqual((patient["firstName"], patient["lastName"]), ("Sally", "Seastar"))

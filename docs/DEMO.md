@@ -6,9 +6,9 @@ The sample includes a year of simulated five-minute glucose readings, daily gluc
 
 ## A short walkthrough
 
-1. Start at **Dashboard → Overview**. Click a timeline event and a topic.
+1. Start at **Dashboard → Overview**. Try the four cards to open all labs, indexed clinical notes, documented visits, and all records. Return to the overview, then click a timeline event and a topic.
 2. Open **Labs**, select A1c or glucose, and compare the quarterly results.
-3. Open **Vitals**. The paired diabetes view shows glucose in blue beside basal insulin in pink and bolus in orange. Drag either chart to zoom both; double-click to reset. Scroll down for time in range, carbohydrates, sleep and steps. The charts show daily summaries, not the individual five-minute samples. See [the diabetes view](DIABETES_VIEW.md).
+3. Open **Vitals**. The paired diabetes view shows glucose in blue beside basal insulin in pink and bolus in orange. Use the labeled date controls to zoom or reset both charts together. Scroll down for time in range, carbohydrates, sleep and steps. The charts show daily summaries, not the individual five-minute samples. See [the diabetes view](DIABETES_VIEW.md).
 4. Open **Records**, search for “diabetes,” and open a visit note.
 5. Explore the desktop **Sources**, **Build**, **Timeline events**, **Notes** and **Doctor** tabs. Rebuilding and editing demo notes/events work normally within the sample store.
 6. Stop recording, then select **Exit demo** and confirm that you want to show your personal records.

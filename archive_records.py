@@ -138,7 +138,8 @@ def insert_attachment(db, source, archive_path, archive_hash, member_name, messa
     text = document_text(payload, extension, hp) if extension in DOCUMENT_EXTENSIONS | IMAGE_EXTENSIONS \
         else '[Attachment retained inside the selected email archive; this file type was not text-extracted.]'
     hp.insert(
-        db, 'documents', source=source, org=Path(archive_path).stem, kind='attachment', date=email_date,
+        db, 'documents', source=source, org=Path(archive_path).stem,
+        kind=hp.document_kind_from_filename(filename, 'attachment'), date=email_date,
         title=filename, author=str(part.get('Content-Type') or ''), parent_id=parent_id, text=text,
         path=archive_ref(hp, archive_path, member_name), format=extension.lstrip('.') or 'attachment',
         source_id=f'{source}:{member_name}:message:{message_index}:attachment:{part_index}',
@@ -219,7 +220,8 @@ def ingest_archive(db, path, hp):
                     match = re.search(r'\d{4}-\d{2}-\d{2}', title)
                     date = match.group(0) if match else None
                     hp.insert(
-                        db, 'documents', source=source, org=path.stem, kind='document', date=date,
+                        db, 'documents', source=source, org=path.stem,
+                        kind=hp.document_kind_from_filename(title), date=date,
                         title=title, text=document_text(data, extension, hp),
                         path=archive_ref(hp, path, info.filename), format=extension.lstrip('.'),
                         source_id=f'{source}:{info.filename}',

@@ -13,8 +13,9 @@ The public product name is **Clippi-Health**. Existing `hp`, `healthpilot.py`, `
 | Artifact | Purpose |
 |---|---|
 | `data/health.db` | Normalized SQLite tables plus verbatim FHIR resources and email lab evidence |
-| `dashboard.html` | Offline dashboard with charts, timeline, and record search |
+| `dashboard.html` | Offline dashboard with the Clippi logo, charts, timeline, and record search |
 | `data/DATA_DICTIONARY.md` | Generated schema, provenance, and data-quality reference |
+| `docs/DATA_MAPPING.md` | Durable source-to-table rules and dashboard count definitions |
 | `data/CASE_STUDY.md` | Topic-organized record with citations |
 | `data/export/*.csv` | Portable table exports |
 | `data/records/*.md` | One searchable Markdown file per document |
@@ -24,6 +25,8 @@ All medical data is ignored by Git. Source data stays under `raw/` or `email/`; 
 For a walkthrough or video, select **Try demo** in the desktop app. Sally Seastar's entirely fictional diabetes record fills the charts and record views in a separate local store. **Exit demo** returns to your records. See the [demo walkthrough](docs/DEMO.md).
 
 The [paired diabetes view](docs/DIABETES_VIEW.md) compares glucose with insulin on linked date ranges. Basal insulin is pink and bolus is orange when the export identifies the delivery type.
+
+The dashboard overview has four actionable cards: **All lab results**, **Clinical notes**, **Documented visits**, and **All records**. Each opens the records it counts. Notes and visits are classified during import from explicit source evidence; the totals describe what the selected exports contain, not a person's complete care history. See the [data dictionary and import mapping](docs/DATA_MAPPING.md) and [classification decision](docs/adr/0001-record-classification.md).
 
 ## Supported inputs
 

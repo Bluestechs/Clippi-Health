@@ -13,6 +13,7 @@ a = Analysis(
         (str(root / "scripts" / "dashboard_template.html"), "scripts"),
         (str(root / "scripts" / "pdftext.swift"), "scripts"),
         (str(root / "vendor" / "plotly-basic.min.js"), "vendor"),
+        (str(root / "assets" / "icons" / "clippi-health.png"), "assets/icons"),
     ],
     hiddenimports=["pypdf"],
     noarchive=False,

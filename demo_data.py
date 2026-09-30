@@ -44,7 +44,9 @@ def generate(root, today=None):
     resources = []
 
     def add(kind, **fields):
-        resources.append({"resourceType": kind, "id": f"demo-{len(resources) + 1}", **fields})
+        resource = {"resourceType": kind, "id": f"demo-{len(resources) + 1}", **fields}
+        resources.append(resource)
+        return resource["id"]
 
     add("Patient", name=[{"given": ["Sally"], "family": "Seastar"}], birthDate="1987-06-15", gender="female")
     for name, ago in [("Type 1 diabetes mellitus", 2400), ("Seasonal allergic rhinitis", 700), ("Vitamin D deficiency", 540)]:
@@ -87,9 +89,10 @@ def generate(root, today=None):
                 referenceRange=[{"low": {"value": low}, "high": {"value": high}}],
                 interpretation=[{"coding": [{"code": "H" if value > high else "L" if value < low else "N"}]}],
                 note=[{"text": "Synthetic result for demonstration; not a clinical measurement."}])
-        add("Encounter", type=[{"text": "Diabetes follow-up"}], period={"start": when + "T10:00:00Z"},
+        visit_id = add("Encounter", status="finished", type=[{"text": "Diabetes follow-up"}], period={"start": when + "T10:00:00Z"},
             serviceProvider={"display": "Seastar Diabetes Clinic (fictional)"})
         add("DocumentReference", date=when, description="Diabetes follow-up — Sally Seastar",
+            type={"text": "Progress note"}, context={"encounter": [{"reference": "Encounter/" + visit_id}]},
             author=[{"display": "Dr. Coral Reed (fictional)"}],
             text={"div": "<div><p>FICTIONAL DEMONSTRATION RECORD — Sally Seastar.</p>"
                   "<p>Reviewed synthetic CGM trends, meal-related variability and activity patterns. "

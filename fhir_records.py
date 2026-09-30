@@ -40,6 +40,26 @@ def text_of(code):
     return code.get("display")
 
 
+def clinical_document_kind(resource):
+    """Use the FHIR document type, rather than a title or body mention, for note tagging."""
+    label = text_of(resource.get("type")) or ""
+    return "note" if re.search(r"\bnotes?\b", label, re.I) else "document"
+
+
+def referenced_encounter_id(resource):
+    """Read an explicit FHIR Encounter reference without inferring from dates or prose."""
+    context = resource.get("context") or {}
+    candidates = context.get("encounter") or resource.get("encounter") or []
+    if not isinstance(candidates, list):
+        candidates = [candidates]
+    for candidate in candidates:
+        ref = candidate.get("reference", "") if isinstance(candidate, dict) else ""
+        match = re.search(r"(?:^|/)Encounter/([^/?#]+)(?:/_history/[^/?#]+)?$", ref)
+        if match:
+            return match.group(1)
+    return None
+
+
 def date_of(resource, hp, *names):
     for name in names:
         value = resource.get(name)
@@ -115,6 +135,14 @@ def resource_text(resource, hp):
     for note in resource.get("note") or []:
         if isinstance(note, dict) and note.get("text"):
             parts.append(note["text"])
+    if resource.get("resourceType") == "Composition":
+        def sections(items):
+            for section in items or []:
+                body = hp.html_to_text((section.get("text") or {}).get("div"))
+                if body:
+                    parts.append("\n".join(filter(None, [section.get("title"), body])))
+                sections(section.get("section"))
+        sections(resource.get("section"))
     return "\n\n".join(dict.fromkeys(p for p in parts if p))
 
 
@@ -159,6 +187,7 @@ def binary_content(resource, hp, source, binary_by_id):
 
 def materialize(db, source, org, source_file, resources, hp):
     counts = Counter()
+    encounter_links = []
     binary_by_id = {r.get("id"): r for r in resources if r.get("resourceType") == "Binary" and r.get("id")}
     seen = set()
     for resource in resources:
@@ -223,31 +252,46 @@ def materialize(db, source, org, source_file, resources, hp):
                           severe=severe or None, noted=date_of(resource, hp, "recordedDate", "onsetDateTime"))
                 counts["allergies"] += 1
         elif kind == "Encounter":
+            if resource.get("status") not in {"finished", "completed"}:
+                continue  # Retain the raw resource, but do not present planned/in-progress care as a past visit.
             period = resource.get("period") or {}
+            visit_date, visit_datetime = hp.parse_when(period.get("start"))
+            if not visit_date:
+                continue
             types = text_of(resource.get("type")) or text_of(resource.get("serviceType"))
             class_name = text_of(resource.get("class"))
             hp.insert(db, "encounters", source=source, org=org,
-                      date=hp.parse_when(period.get("start"))[0], datetime=hp.parse_when(period.get("start"))[1],
+                      date=visit_date, datetime=visit_datetime,
                       type=types or class_name or "Encounter", provider=None,
                       dept=reference_name(resource.get("serviceProvider")), source_file=source_file, source_id=rid)
             counts["encounters"] += 1
         elif kind == "DocumentReference":
             text = resource_text(resource, hp)
             attachment_text, generated, fmt = binary_content(resource, hp, source, binary_by_id)
-            hp.insert(db, "documents", source=source, org=org, kind="document",
+            doc_id = hp.insert(db, "documents", source=source, org=org, kind=clinical_document_kind(resource),
                       date=date_of(resource, hp, "date", "content"),
                       title=resource.get("description") or text_of(resource.get("type")) or "Clinical document",
                       author=reference_name(resource.get("author")), text="\n\n".join(filter(None, [text, attachment_text])),
                       path=generated or source_file, format=fmt or "fhir+ndjson", source_id=rid, provenance=provenance)
+            if encounter_ref := referenced_encounter_id(resource):
+                encounter_links.append((doc_id, encounter_ref))
             counts["documents"] += 1
         elif kind == "Composition":
             text = resource_text(resource, hp)
             if text:
-                hp.insert(db, "documents", source=source, org=org, kind="document",
+                doc_id = hp.insert(db, "documents", source=source, org=org, kind=clinical_document_kind(resource),
                           date=date_of(resource, hp, "date"), title=resource.get("title") or "Clinical composition",
                           author=reference_name(resource.get("author")), text=text, path=source_file,
                           format="fhir+ndjson", source_id=rid, provenance=provenance)
+                if encounter_ref := referenced_encounter_id(resource):
+                    encounter_links.append((doc_id, encounter_ref))
                 counts["documents"] += 1
+    # Resource order in NDJSON is arbitrary; resolve links only after all encounters are projected.
+    encounters = {rid: eid for eid, rid in db.execute(
+        "SELECT id, source_id FROM encounters WHERE source=? AND source_id IS NOT NULL", [source])}
+    for doc_id, encounter_ref in encounter_links:
+        if encounter_ref in encounters:
+            db.execute("UPDATE documents SET encounter_id=? WHERE id=?", [encounters[encounter_ref], doc_id])
     return counts
 
 

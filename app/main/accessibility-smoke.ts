@@ -81,7 +81,10 @@ export async function runAccessibilitySmoke(window: BrowserWindow, frame: WebFra
     checks.resetBoth=Date.parse(charts[0].layout.xaxis.range[0])<before && JSON.stringify(charts[0].layout.xaxis.range)===JSON.stringify(charts[1].layout.xaxis.range);
     checks.averageEquivalent=[...group.querySelectorAll('th')].some(el=>el.textContent==='30-day average');
     showLabsFor(TOPICS[0].name);await tick();
-    const lab=document.querySelector('#labcharts .js-plotly-plot'), card=lab.closest('.card');
+    for(let i=0;i<30 && !document.querySelector('#labcharts .js-plotly-plot');i++) await tick();
+    const lab=document.querySelector('#labcharts .js-plotly-plot');
+    if(!lab) throw new Error('The selected topic lab chart did not finish rendering');
+    const card=lab.closest('.card');
     const labDates=lab.data[0].x.map(d=>d.slice(0,10)).sort();
     await submit(card.querySelector('form'),[labDates[0],labDates.at(-1)]);
     checks.labApply=lab.layout.xaxis.range[0]===labDates[0];

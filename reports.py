@@ -329,28 +329,28 @@ TABLE_DOCS = OrderedDict([
         ("last_updated", "FHIR meta.lastUpdated when present"),
         ("source_file", "raw JSONL file containing the resource"),
         ("json", "verbatim compact FHIR JSON; the CSV export reports its character count instead of duplicating PHI") ])),
-    ("documents", ("Every text record: clinical notes, visit summaries, imaging/pathology reports, correspondence and attachments, FHIR documents and C-CDA summaries. Full-text index: `documents_fts`.", [
+    ("documents", ("Every searchable text record: clinical notes, visit summaries, reports, correspondence, attachments, FHIR documents and C-CDA summaries. Full-text index: `documents_fts`.", [
         ("id", "row id (reassigned on every rebuild)"),
         ("source / org", "sources.key and organization"),
-        ("kind", "`note` clinical note · `avs` visit summary · `report` imaging/pathology/result narrative · `message` current correspondence text · `attachment` linked file or quoted history · `document` FHIR/portal/outside document · `ccda` HL7 C-CDA summary"),
-        ("date", "note signed / visit / message / report date, `YYYY-MM-DD`"),
+        ("kind", "`note` explicitly typed or named clinical note (including encounter-linked C-CDA episode note and named note attachments) · `avs` visit summary · `report` result narrative · `message` correspondence · `attachment` other linked file or quoted history · `document` other local/FHIR document · `ccda` C-CDA summary without an explicit encounter-linked note classification · `journal` patient-authored entry"),
+        ("date", "source date, `YYYY-MM-DD`; for email attachments this is the enclosing transmission date, not necessarily the clinical event date"),
         ("title", "note type (`Progress Notes`, `H&P`, `Discharge Summary` …), order name, message subject, or file name"),
         ("author", "signing clinician, ordering provider, or document type"),
         ("dept", "department of the visit the record belongs to (notes and AVS)"),
-        ("encounter_id", "encounters.id for notes and AVS"),
-        ("parent_id", "for attachments: the documents.id of the message thread that carried it"),
+        ("encounter_id", "encounters.id only when the source explicitly links a document to a structured encounter"),
+        ("parent_id", "documents.id of the enclosing message for email attachments, including note files"),
         ("text", "plain text. HTML flattened; PDFs extracted with PDFKit. Email attachments use supplied OCR/text sidecars with uncertainty retained; originals remain at `path`"),
         ("path", "original file under raw/ or email/"),
         ("format", "original format: html, json, pdf, jpg, png, tif, xml, eml, md, or `metadata-only` when the portal did not allow download"),
         ("source_id", "the source's own stable id, such as a FHIR resource id, email message id, or C-CDA id"),
         ("provenance", "how the row was extracted")])),
     ("documents_fts", ("SQLite FTS5 index over `documents.title` and `documents.text`. `SELECT rowid FROM documents_fts WHERE documents_fts MATCH '\"fecal calprotectin\"'` — rowid = documents.id. Supports AND/OR/NOT, phrases in double quotes, and `prefix*`.", [])),
-    ("encounters", ("One row per visit or FHIR Encounter (past and scheduled).", [
-        ("date / datetime", "visit date (and time when given). Dates after today are scheduled appointments"),
+    ("encounters", ("One row per explicitly documented C-CDA encompassingEncounter or finished/completed FHIR Encounter. This is not a complete visit history.", [
+        ("date / datetime", "structured encounter start date (and time when supplied); no email or filename date substitution"),
         ("type", "source visit/encounter type: Office Visit, Telephone, Emergency Department, Surgery, and similar"),
         ("provider", "clinician or nurse the visit is filed under"),
         ("dept", "department / clinic"),
-        ("source_id", "source encounter id")])),
+        ("source_file / source_id", "original source file and source encounter id when provided")])),
     ("conditions", ("Problem list and past-medical-history entries.", [
         ("name", "condition as written in the chart"),
         ("noted", "date first noted (problem list); history entries are usually undated"),
@@ -453,7 +453,7 @@ Conventions: dates are ISO `YYYY-MM-DD` (local time); numbers are plain floats; 
 raw/fhir/<source>/*.jsonl    direct SMART/FHIR or supplied NDJSON → fhir_resources and projected clinical tables
 raw/apple/*.zip              Apple Health export — clinical-records/*.json (FHIR) → labs, immunizations; export.xml → vitals_daily
 email/*/healthpilot-source.json  configured local email exports; index.csv + messages + attachments + OCR + labs.csv
-raw/other/**                 anything added by hand (PDF/HTML/TXT → documents; IHE_XDM/*.XML C-CDA → documents(ccda))
+raw/other/**                 anything added by hand (PDF/HTML/TXT → documents; IHE_XDM/*.XML C-CDA → documents and explicit encounters)
 curated_events.csv           hand-written timeline rows → events (curated=1)
 ```
 """)
@@ -560,7 +560,7 @@ curated_events.csv           hand-written timeline rows → events (curated=1)
 - **Apple Health clinical records** are FHIR DSTU2 as delivered by the labs; standalone Observations carry no performer and are attributed to Quest (see source notes). `issued` vs `effectiveDateTime` can differ by days; `date` uses `effectiveDateTime`.
 - **Device data** is summarized per day. Glucose comes from every app that wrote to HealthKit (Dexcom, Loop, meters), so CGM days have hundreds of samples and meter-only days a few; `n` tells them apart. Time in range is only computed on days with ≥12 readings.
 - **Time zones.** UTC instants are converted to local time; Apple and FHIR timestamps can carry their own offsets.
-- **Scheduled appointments** appear in `encounters` with future dates; they have no notes.
+- **Document and encounter tagging.** `note` requires an explicit FHIR document type, encounter-linked C-CDA episode-note code, or a source filename explicitly naming a clinical note. An email message about an appointment or a note mentioned inside a document does not create a note or encounter. `encounters` projects only structured C-CDA encompassing encounters with dates and finished/completed FHIR Encounters. Source exports may omit many real visits or notes; dashboard counts mean indexed records, not lifetime totals. See `docs/DATA_MAPPING.md` and the record-classification ADR.
 - **Ids are not stable** across rebuilds. `source_id`, `path`, and `date + title` are.
 """)
 

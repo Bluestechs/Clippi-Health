@@ -56,6 +56,8 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(async () => {
+  // BrowserWindow's icon does not control the macOS Dock icon when run through Electron.
+  if (process.platform === "darwin" && app.dock) app.dock.setIcon(join(__dirname, "logo.png"));
   // hp://root/<path> serves the built dashboard (and whatever it references) out of the data folder,
   // so the same file still opens standalone in a browser.
   protocol.handle("hp", (request) => {

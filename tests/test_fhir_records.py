@@ -27,7 +27,7 @@ class FhirImportTests(unittest.TestCase):
                 {"resourceType": "Observation", "id": "vital1", "category": [{"coding": [{"code": "vital-signs"}]}],
                  "code": {"text": "Heart rate"}, "valueQuantity": {"value": 70, "unit": "bpm"}},
                 {"resourceType": "Condition", "id": "c1", "code": {"text": "Example condition"}, "recordedDate": "2025-02-03"},
-                {"resourceType": "Encounter", "id": "e1", "type": [{"text": "Office visit"}],
+                {"resourceType": "Encounter", "id": "e1", "status": "finished", "type": [{"text": "Office visit"}],
                  "period": {"start": "2025-02-03T10:00:00Z"}, "serviceProvider": {"display": "Example Clinic"}},
                 {"resourceType": "MedicationRequest", "id": "m1", "medicationCodeableConcept": {"text": "Example 5 mg tablet"},
                  "authoredOn": "2025-02-03", "dosageInstruction": [{"text": "Take once daily"}]},
@@ -42,6 +42,7 @@ class FhirImportTests(unittest.TestCase):
                 {"resourceType": "Binary", "id": "b1", "contentType": "text/plain",
                  "data": base64.b64encode(b"Synthetic clinical document").decode()},
                 {"resourceType": "DocumentReference", "id": "d1", "date": "2025-07-08",
+                 "type": {"text": "Progress note"},
                  "description": "Outside note", "content": [{"attachment": {"url": "Binary/b1", "contentType": "text/plain"}}]},
                 {"resourceType": "Goal", "id": "g1", "description": {"text": "Unsupported but retained"}},
             ]
@@ -63,6 +64,7 @@ class FhirImportTests(unittest.TestCase):
             self.assertEqual(db.execute("SELECT name,sig FROM medications").fetchone(),
                              ("Example 5 mg tablet", "Take once daily"))
             self.assertEqual(db.execute("SELECT count(*) FROM documents").fetchone()[0], 2)
+            self.assertEqual(db.execute("SELECT kind FROM documents WHERE source_id='d1'").fetchone()[0], "note")
             self.assertIn("Synthetic clinical document", db.execute(
                 "SELECT text FROM documents WHERE source_id='d1'").fetchone()[0])
             self.assertEqual(json.loads(db.execute("SELECT value FROM meta WHERE key='patient'").fetchone()[0])["firstName"], "Alex")
@@ -78,6 +80,33 @@ class FhirImportTests(unittest.TestCase):
             ]}) + "\n")
             rows = list(fhir_records.iter_resources(path))
             self.assertEqual([key for key, _ in rows], ["bundle.ndjson:1:0", "bundle.ndjson:1:1"])
+
+    def test_only_finished_encounters_project_as_past_visits(self):
+        db = sqlite3.connect(":memory:")
+        db.executescript(hp.SCHEMA)
+        resources = [
+            {"resourceType": "Encounter", "id": "planned", "status": "planned", "period": {"start": "2026-02-01"}},
+            {"resourceType": "Encounter", "id": "active", "status": "in-progress", "period": {"start": "2026-01-01"}},
+            {"resourceType": "Encounter", "id": "done", "status": "finished", "period": {"start": "2025-01-01"}},
+        ]
+        fhir_records.materialize(db, "fhir-example", "Example", "synthetic.ndjson", resources, hp)
+        self.assertEqual(db.execute("SELECT source_id FROM encounters").fetchall(), [("done",)])
+
+    def test_explicit_document_encounter_reference_links_regardless_of_order(self):
+        db = sqlite3.connect(":memory:")
+        db.executescript(hp.SCHEMA)
+        resources = [
+            {"resourceType": "DocumentReference", "id": "note-one", "type": {"text": "Progress note"},
+             "context": {"encounter": [{"reference": "Encounter/visit-one"}]}},
+            {"resourceType": "Composition", "id": "note-two", "type": {"text": "Consultation note"},
+             "encounter": {"reference": "Encounter/visit-one"},
+             "section": [{"title": "Assessment", "text": {"div": "<div>Synthetic assessment.</div>"}}]},
+            {"resourceType": "Encounter", "id": "visit-one", "status": "finished", "period": {"start": "2025-01-01"}},
+        ]
+        with tempfile.TemporaryDirectory() as directory, patch.object(hp, "DATA", Path(directory)):
+            fhir_records.materialize(db, "fhir-example", "Example", "synthetic.ndjson", resources, hp)
+        self.assertEqual(db.execute("SELECT kind,encounter_id FROM documents").fetchall(), [("note", 1), ("note", 1)])
+        self.assertIn("Synthetic assessment.", db.execute("SELECT text FROM documents WHERE source_id='note-two'").fetchone()[0])
 
 
 if __name__ == "__main__":

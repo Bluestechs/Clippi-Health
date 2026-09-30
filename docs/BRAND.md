@@ -26,4 +26,4 @@ A continuous clip orbits a small data sprout. This direction emphasizes personal
 
 ## Production
 
-Derive the macOS `.icns`, Windows `.ico`, Linux PNG set, installer artwork, and favicon from the production master. Keep the original proportions, transparent canvas, and enough clear space for rounded platform masks.
+Derive the macOS `.icns`, Windows `.ico`, Linux PNG set, installer artwork, and favicon from the production master. The Electron header uses the master PNG, and its macOS startup sets the Dock icon explicitly so development launches do not retain Electron's placeholder. The generated standalone dashboard embeds the compact icon PNG so the logo remains visible offline and inside the packaged app. Keep the original proportions, transparent canvas, and enough clear space for rounded platform masks.

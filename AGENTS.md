@@ -5,6 +5,7 @@ This folder organizes one person's health records from standards-based FHIR/C-CD
 ## Read first
 
 1. `data/DATA_DICTIONARY.md` — generated schema, provenance, vocabularies, and caveats.
+   `docs/DATA_MAPPING.md` — durable import mapping, classification and dashboard count contract.
 2. `data/CASE_STUDY.md` — records organized by `topics.json`, with citations.
 3. `docs/CONNECTORS.md` — local-only connector trust boundary and SMART workflow.
 4. `skills/health-pilot-records/SKILL.md` — reusable query workflow and cookbook.

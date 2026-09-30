@@ -18,6 +18,12 @@ Clippi-Health is local-first. It will not operate or depend on a hosted Clippi-H
 - Treat providers that require a confidential server-held secret as unsupported; guide those users to manual FHIR/C-CDA export.
 - Keep generic FHIR NDJSON and C-CDA import paths for sources without direct SMART support.
 
+## Record coverage and import fidelity
+
+- Keep note and visit classification in the importer, grounded in structured source metadata or an explicitly named note file. The overview cards open the exact normalized records counted in the database; they do not infer a complete lifetime care history.
+- Surface source-level coverage limits, extend standards-backed note and encounter mapping, and flag unresolved curated timeline source links. Track this work in [record coverage #10](https://github.com/bennydogg/clippi-health/issues/10).
+- Maintain the durable [data mapping](docs/DATA_MAPPING.md), generated private data dictionary, and [classification ADR](docs/adr/0001-record-classification.md) together when an import rule changes.
+
 ## Cross-platform desktop
 
 - Normalize browser launching, loopback OAuth callbacks, paths, permissions, encodings, long paths, and process lifecycle across all three operating systems.

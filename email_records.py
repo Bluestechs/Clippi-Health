@@ -224,7 +224,8 @@ def ingest_exports(db, root, hp):
                 # Preserve originals even when there is no supplied transcription.
                 text = sidecar.read_text(encoding="utf-8", errors="replace") if sidecar else '[No text sidecar supplied; open the original attachment.]'
                 method = 'supplied OCR transcription (uncertain readings retained)' if sidecar and sidecar.name.endswith('.ocr.md') else 'supplied text extraction' if sidecar else 'metadata only'
-                aid = hp.insert(db, 'documents', source=source, org=org, kind='attachment',
+                aid = hp.insert(db, 'documents', source=source, org=org,
+                    kind=hp.document_kind_from_filename(path.name, 'attachment'),
                     date=entry['date'][:10], title=path.name, author='See attachment', parent_id=doc_id,
                     text='Attachment to email dated ' + entry['date'] + '. This is the transmission date; '
                          'clinical and collection dates are in the attachment.\nText: ' + method + '.\n\n' + text,

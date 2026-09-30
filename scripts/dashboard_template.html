@@ -45,6 +45,7 @@ header { position: sticky; top: 0; z-index: 5; background: var(--page); border-b
 .wrap { max-width: 1280px; margin: 0 auto; padding: 0 16px; }
 .head { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; padding: 14px 0 6px; }
 .head h1 { font-size: 18px; margin: 0; font-weight: 650; }
+.head .brand-logo { width: 28px; height: 28px; object-fit: contain; flex: none; align-self: center; }
 .head .who { color: var(--ink-2); }
 .head .built { color: var(--muted); font-size: 12px; margin-left: auto; }
 .manage-sources { flex: none; }
@@ -59,10 +60,13 @@ section[hidden] { display: none; }
 .grid { display: grid; gap: 16px; }
 .cols-2 { grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); }
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
-.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
-.tile .label { color: var(--ink-2); font-size: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; min-height: 104px; width: 100%; text-align: left; color: var(--ink); font: inherit; cursor: pointer; }
+.tile:hover { background: color-mix(in srgb, var(--tc) 7%, var(--surface)); }
+.tile .label { color: var(--ink-2); font-size: 12px; display: flex; justify-content: space-between; gap: 8px; }
+.tile .arrow { color: var(--ink-2); font-size: 16px; line-height: 1; }
 .tile .value { font-size: 24px; font-weight: 600; margin-top: 2px; }
 .tile .note { color: var(--muted); font-size: 12px; }
+#visits-card { scroll-margin-top: 110px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th { text-align: left; font-weight: 600; color: var(--ink-2); border-bottom: 1px solid var(--border-solid); padding: 6px 8px 6px 0; }
 td { border-bottom: 1px solid var(--border); padding: 6px 8px 6px 0; vertical-align: top; }
@@ -257,6 +261,7 @@ button { white-space: normal; overflow-wrap: anywhere; }
 <div class="site-head">
   <div class="wrap">
     <div class="head">
+      <img class="brand-logo" src="data:image/png;base64,__LOGO_BASE64__" alt="">
       <h1>Clippi-Health</h1>
       <span class="who" id="who"></span>
       <span class="built" id="built"></span>
@@ -290,6 +295,11 @@ button { white-space: normal; overflow-wrap: anywhere; }
       <div id="timeline" class="chart" role="img" aria-label="Timeline chart. Use the event list below for keyboard access and full event text."></div>
       <details><summary>Timeline event list</summary><div id="timeline-events"></div></details>
       <div class="event-detail" id="event-detail" tabindex="-1" hidden></div>
+    </div>
+    <div class="card" id="visits-card" style="margin-bottom:16px" hidden>
+      <h2 id="visits-heading" tabindex="-1">Documented visits</h2>
+      <p class="sub">Only encounters explicitly included in imported C-CDA or completed FHIR records. Other care may be absent from these exports.</p>
+      <div id="visit-list"></div>
     </div>
     <div class="grid cols-2">
       <div class="card"><h2>Problem list</h2><p class="sub">As recorded by each health system, with the date first noted</p><div id="problems"></div></div>
@@ -559,20 +569,34 @@ function contextActions(topic, destination) {
 // ---------- overview ----------
 function renderOverview() {
   const today = new Date().toISOString().slice(0, 10);
-  const labYears = DATA.labs.filter(l => l.d && l.d <= today).map(l => year(l.d));
-  const docYears = DATA.docs.filter(d => d.d && d.d <= today).map(d => year(d.d));
-  const allYears = labYears.concat(docYears);
   const tests = new Set(DATA.labs.map(l => l.t));
   const notes = DATA.docs.filter(d => d.k === "note").length;
-  const pastVisits = DATA.encounters.filter(e => e.date && e.date <= new Date().toISOString().slice(0, 10)).length;
+  const pastVisits = DATA.encounters.filter(e => e.date && e.date <= today);
   const tiles = [
-    ["Lab results", DATA.labs.length.toLocaleString(), `${tests.size} distinct tests`],
-    ["Years covered", allYears.length ? `${Math.min(...allYears)}–${Math.max(...allYears)}` : "—", "across all sources"],
-    ["Clinical notes", notes.toLocaleString(), `${DATA.docs.length.toLocaleString()} searchable records`],
-    ["Visits", pastVisits.toLocaleString(), "past encounters across sources"],
+    ["All lab results", DATA.labs.length.toLocaleString(), `${tests.size} distinct tests`, "blue", () => {
+      rememberView(); store.set("labtopic", null); store.set("labsel", null); store.set("labrange", "All");
+      $("#test-filter").value = "";
+      for (const key of Object.keys(chartViews)) if (key.startsWith("lab:")) delete chartViews[key];
+      rendered.labs = false; showTab("labs");
+    }],
+    ["Clinical notes", notes.toLocaleString(), "Open all indexed notes", "orange", () => searchRecords("", "note")],
+    ["Documented visits", pastVisits.length.toLocaleString(), "Open imported encounters", "violet", () => {
+      const card = $("#visits-card"); card.hidden = false;
+      card.scrollIntoView({ block: "start" }); $("#visits-heading").focus({ preventScroll: true });
+    }],
+    ["All records", DATA.docs.length.toLocaleString(), "Search every imported document", "aqua", () => searchRecords("")],
   ];
-  const tileHues = ["blue", "aqua", "orange", "violet"];
-  $("#tiles").replaceChildren(...tiles.map(([l, v, n], i) => h("div", { class: "tile", style: `--tc: var(--c-${tileHues[i % 4]})` }, h("div", { class: "label", text: l }), h("div", { class: "value", text: v }), h("div", { class: "note", text: n }))));
+  $("#tiles").replaceChildren(...tiles.map(([l, v, n, hue, open]) => h("button", {
+    type: "button", class: "tile", style: `--tc: var(--c-${hue})`, onclick: open,
+  }, h("div", { class: "label" }, l, h("span", { class: "arrow", "aria-hidden": "true", text: "↗" })),
+  h("div", { class: "value", text: v }), h("div", { class: "note", text: n }))));
+  $("#visit-list").replaceChildren(pastVisits.length ? h("table", null,
+    h("thead", null, h("tr", null, h("th", { text: "Date" }), h("th", { text: "Type" }), h("th", { text: "Source record" }))),
+    h("tbody", null, pastVisits.map(e => {
+      const sourceDoc = DATA.docs.find(d => d.e === e.id);
+      return h("tr", null, h("td", { text: fmtDate(e.date) }), h("td", { text: e.type || "Encounter" }),
+        h("td", null, sourceDoc ? h("button", { class: "linkbtn", text: sourceDoc.ti || "Open source record", onclick: () => openDoc(sourceDoc.id) }) : (e.o || "—")));
+    }))) : h("div", { class: "empty", text: "No completed encounters were included in the imported structured records." }));
   drawFocus();
   drawTimeline();
 
@@ -1068,10 +1092,10 @@ function renderReader(id) {
     requestAnimationFrame(() => reader.scrollIntoView({ block: "start" }));
   }
 }
-function searchRecords(q) {
+function searchRecords(q, kind = "all") {
   rememberView(); clearReader(); recState.src = "all";
   $(".records-layout").classList.remove("viewing-record");
-  recState.q = q; recState.kind = "all"; recState.topic = null; store.set("reckind", "all"); store.set("rectopic", null);
+  recState.q = q; recState.kind = kind; recState.topic = null; store.set("reckind", kind); store.set("rectopic", null);
   if (rendered.records) { $("#rec-q").value = q; $("#rec-src").value = "all"; drawRecTopics(); drawKinds(); drawResults(); }
   showTab("records");
 }

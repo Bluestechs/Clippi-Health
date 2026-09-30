@@ -22,6 +22,11 @@ def evidence(**overrides):
 
 
 class EmailImportTests(unittest.TestCase):
+    def test_only_explicit_note_filename_is_tagged_as_note(self):
+        self.assertEqual(hp.document_kind_from_filename('Clinic chart notes.pdf', 'attachment'), 'note')
+        self.assertEqual(hp.document_kind_from_filename('appointment reminder.pdf', 'attachment'), 'attachment')
+        self.assertEqual(hp.document_kind_from_filename('Please note the visit date.pdf', 'attachment'), 'attachment')
+
     def test_ambiguity_and_secondary_evidence_never_become_primary(self):
         for row in [evidence(row_type='physician_letter'), evidence(row_type='historical'),
                     evidence(row_type='patient_image'), evidence(uncertain='Y'),

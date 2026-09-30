@@ -8,6 +8,7 @@ from email.message import EmailMessage
 from pathlib import Path
 
 import archive_records
+import healthpilot
 
 
 SCHEMA = """
@@ -41,6 +42,8 @@ class Helpers:
     @staticmethod
     def pdf_text(_path):
         return 'PDF text'
+
+    document_kind_from_filename = staticmethod(healthpilot.document_kind_from_filename)
 
 
 def message(subject, body='Body text', attachment=False):

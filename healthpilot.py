@@ -14,6 +14,7 @@ Inputs (all under raw/, never modified):
 Standard library only. Nothing leaves this machine.
 """
 import csv
+import base64
 import hashlib
 import html
 import json
@@ -39,6 +40,7 @@ DB_PATH = DATA / "health.db"
 DASHBOARD = ROOT / "dashboard.html"
 TEMPLATE = RESOURCES / "scripts" / "dashboard_template.html"
 PLOTLY = RESOURCES / "vendor" / "plotly-basic.min.js"
+LOGO = RESOURCES / "assets" / "icons" / "clippi-health.png"
 PDFTEXT = RESOURCES / "scripts" / "pdftext.swift"
 CURATED = ROOT / "curated_events.csv"
 
@@ -390,6 +392,12 @@ def pdf_text(path):
 V3 = "{urn:hl7-org:v3}"
 
 
+def document_kind_from_filename(filename, default="document"):
+    """Tag an explicitly named note file, never a message or a mention inside its text."""
+    stem = Path(filename).stem
+    return "note" if re.search(r"\b(?:chart|clinical|progress|consultation|visit|discharge)\s+notes?\b", stem, re.I) else default
+
+
 def ingest_all_ccda(db):
     """C-CDA documents in uncompressed IHE XDM folders or MyChart record ZIPs under raw/."""
     orgs = db.execute("SELECT key, org FROM sources").fetchall()
@@ -461,9 +469,10 @@ def ingest_all_ccda(db):
             continue
     for key in added_sources:
         count, first, last = db.execute(
-            "SELECT count(*), min(date), max(date) FROM documents WHERE source=? AND kind='ccda'", [key]).fetchone()
+            "SELECT count(*), min(date), max(date) FROM documents WHERE source=? AND kind IN ('ccda', 'note')", [key]).fetchone()
+        visit_count = db.execute("SELECT count(*) FROM encounters WHERE source=?", [key]).fetchone()[0]
         db.execute("UPDATE sources SET coverage_from=?, coverage_to=?, record_counts=? WHERE key=?",
-                   [first, last, json.dumps({"documents": count}), key])
+                   [first, last, json.dumps({"documents": count, "encounters": visit_count}), key])
     return n
 
 
@@ -489,13 +498,36 @@ def ingest_ccda(db, root, path, key, org):
         if txt:
             parts.append(f"## {st}\n{txt}" if st else txt)
     text = "\n\n".join(parts)
-    if not parts or db.execute("SELECT 1 FROM documents WHERE kind='ccda' AND text=?", [text]).fetchone():
+    if not parts or db.execute("SELECT 1 FROM documents WHERE kind IN ('ccda', 'note') AND text=?", [text]).fetchone():
         return 0  # empty, or the same document already came in via another download
     idel = root.find(f"{V3}id")
     stored_path = path_text if "!/" in path_text else rel(path)
-    insert(db, "documents", source=key, org=org, kind="ccda", date=date, title=title, text=text, path=stored_path,
+    encounter = root.find(f"{V3}componentOf/{V3}encompassingEncounter")
+    encounter_id = None
+    if encounter is not None:
+        effective = encounter.find(f"{V3}effectiveTime")
+        low = effective.find(f"{V3}low") if effective is not None else None
+        when = low.get("value") if low is not None else (effective.get("value") if effective is not None else None)
+        visit_date, visit_datetime = parse_when(when)
+        if visit_date:
+            coded = encounter.find(f"{V3}code")
+            visit_type = (coded.get("displayName") or coded.get("code")) if coded is not None else None
+            encounter_source_id = encounter.find(f"{V3}id")
+            encounter_id = insert(db, "encounters", source=key, org=org, date=visit_date,
+                                  datetime=visit_datetime, type=visit_type or "Encounter",
+                                  source_file=stored_path,
+                                  source_id=(encounter_source_id.get("root") or encounter_source_id.get("extension"))
+                                  if encounter_source_id is not None else None)
+    document_code = root.find(f"{V3}code")
+    # LOINC 34133-9 names an episode summary note. Tag it as a clinical note only
+    # when the file also identifies a specific encounter; longitudinal summaries stay C-CDA.
+    kind = "note" if encounter_id and document_code is not None and document_code.get("code") == "34133-9" \
+        and document_code.get("codeSystem") == "2.16.840.1.113883.6.1" else "ccda"
+    insert(db, "documents", source=key, org=org, kind=kind, date=date, title=title, text=text, path=stored_path,
+           encounter_id=encounter_id,
            format="xml", source_id=(idel.get("root") if idel is not None else None),
-           provenance="C-CDA ClinicalDocument (HL7 standard) from a record-download package; section text flattened")
+           provenance="C-CDA ClinicalDocument (HL7 standard) from a record-download package; section text flattened; "
+                      "encounter projected only from encompassingEncounter; note type from document LOINC code")
     return 1
 
 # ---------------------------------------------------------------------------
@@ -727,7 +759,8 @@ def ingest_loose_files(db):
             text = pdf_text(p) if ext == ".pdf" else (html_to_text(p.read_text(encoding="utf-8", errors="replace"))
                                                      if ext in (".html", ".htm") else p.read_text(encoding="utf-8", errors="replace"))
             date = parse_when(re.search(r"\d{4}-\d{2}-\d{2}", p.name).group(0))[0] if re.search(r"\d{4}-\d{2}-\d{2}", p.name) else None
-            insert(db, "documents", source=folder.name, org=folder.name, kind="document", date=date,
+            insert(db, "documents", source=folder.name, org=folder.name,
+                   kind=document_kind_from_filename(p.name), date=date,
                    title=p.stem, text=text, path=rel(p), format=ext.lstrip("."),
                    provenance=f"raw/{folder.name} — file added by hand (date taken from the file name when it has one)")
             n += 1
@@ -973,6 +1006,7 @@ def build_dashboard(db):
     page = TEMPLATE.read_text(encoding="utf-8")
     page = page.replace("/*__PLOTLY__*/", PLOTLY.read_text(encoding="utf-8").replace("</script", "<\\/script"))
     page = page.replace("/*__DATA__*/null", payload)
+    page = page.replace("__LOGO_BASE64__", base64.b64encode(LOGO.read_bytes()).decode("ascii"))
     DASHBOARD.write_text(page, encoding="utf-8")
     return len(page)
 

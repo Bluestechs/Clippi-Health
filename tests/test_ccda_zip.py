@@ -3,6 +3,7 @@ import sqlite3
 import tempfile
 import unittest
 import zipfile
+from xml.etree import ElementTree
 from pathlib import Path
 from unittest.mock import patch
 
@@ -23,6 +24,29 @@ DOCUMENT = """<?xml version="1.0" encoding="UTF-8"?>
 
 
 class CcdaZipTests(unittest.TestCase):
+    def test_coded_visit_note_projects_documented_encounter(self):
+        visit = DOCUMENT.replace(
+            '<title>Synthetic Visit Summary</title>',
+            '<title>Synthetic Visit Note</title><code code="34133-9" codeSystem="2.16.840.1.113883.6.1"/>',
+        ).replace(
+            '<effectiveTime value="20260928"/>',
+            '<effectiveTime value="20260928"/><componentOf><encompassingEncounter>'
+            '<id root="synthetic-visit"/><effectiveTime><low value="20260927"/></effectiveTime>'
+            '<code code="AMB" displayName="Ambulatory visit"/></encompassingEncounter></componentOf>',
+        )
+        db = sqlite3.connect(':memory:')
+        db.executescript(healthpilot.SCHEMA)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'note.xml'
+            path.write_text(visit)
+            with patch.object(healthpilot, 'ROOT', Path(directory).resolve()):
+                self.assertEqual(healthpilot.ingest_ccda(db, ElementTree.fromstring(visit),
+                                                       path, 'ccda-example', 'Example Health'), 1)
+        self.assertEqual(db.execute('SELECT date,type,source_id FROM encounters').fetchone(),
+                         ('2026-09-27', 'Ambulatory visit', 'synthetic-visit'))
+        self.assertEqual(db.execute('SELECT kind,date,encounter_id FROM documents').fetchone(),
+                         ('note', '2026-09-27', 1))
+
     def test_mychart_zip_is_ingested_without_unpacking(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
