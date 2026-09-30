@@ -2,51 +2,136 @@ name: Installer builds
 
 on:
   workflow_dispatch:
+    inputs:
+      include_macos:
+        description: Also build ad-hoc macOS evaluation packages
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
 jobs:
+  targets:
+    name: Select native builders
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.targets.outputs.matrix }}
+    steps:
+      - id: targets
+        env:
+          INCLUDE_MACOS: ${{ inputs.include_macos }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          targets = [
+              {"name": "macOS Apple Silicon", "os": "macos-15", "arch": "arm64", "artifact": "macos-arm64-evaluation"},
+              {"name": "macOS Intel", "os": "macos-15-intel", "arch": "x64", "artifact": "macos-x64-evaluation"},
+              {"name": "Windows x64", "os": "windows-2025", "arch": "x64", "artifact": "windows-x64-evaluation"},
+              {"name": "Windows ARM64", "os": "windows-11-arm", "arch": "arm64", "artifact": "windows-arm64-evaluation"},
+              {"name": "Linux x64", "os": "ubuntu-24.04", "arch": "x64", "artifact": "linux-x64-evaluation"},
+              {"name": "Linux ARM64", "os": "ubuntu-24.04-arm", "arch": "arm64", "artifact": "linux-arm64-evaluation"},
+          ]
+          if os.environ["INCLUDE_MACOS"] != "true":
+              targets = [target for target in targets if not target["os"].startswith("macos-")]
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write("matrix=" + json.dumps({"include": targets}) + "\n")
+          PY
+
   build:
     name: ${{ matrix.name }}
+    needs: targets
+    timeout-minutes: 25
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: macOS Apple Silicon
-            os: macos-15
-            artifact: macos-arm64-evaluation
-          - name: macOS Intel
-            os: macos-15-intel
-            artifact: macos-x64-evaluation
-          - name: Windows x64
-            os: windows-2025
-            artifact: windows-x64-evaluation
-          - name: Linux x64
-            os: ubuntu-24.04
-            artifact: linux-x64-evaluation
+      matrix: ${{ fromJSON(needs.targets.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
+          architecture: ${{ matrix.arch }}
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: "22"
+          architecture: ${{ matrix.arch }}
           cache: npm
           cache-dependency-path: app/package-lock.json
-      - name: Install Linux packaging tools
+      - name: Verify native build tools
+        shell: bash
+        env:
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          node -e 'require("node:assert/strict").equal(process.arch, process.env.TARGET_ARCH)'
+          python -c 'import os, platform, struct; assert platform.machine().lower() in {"x64": ("amd64", "x86_64"), "arm64": ("arm64", "aarch64")}[os.environ["TARGET_ARCH"]]; assert struct.calcsize("P") == 8'
+      - name: Install Linux packaging and smoke tools
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install --yes fakeroot
+        run: sudo apt-get update && sudo apt-get install --yes fakeroot xvfb unzip
       - name: Install runtime builder
         run: python -m pip install -r packaging/requirements-build.txt
       - name: Install desktop dependencies
         working-directory: app
         run: npm ci
-      - name: Build and verify installer
+      - name: Build and verify installers
+        if: matrix.os != 'windows-11-arm'
         working-directory: app
         run: npm run make
+      - name: Build native Windows ARM64 portable ZIP
+        if: matrix.os == 'windows-11-arm'
+        working-directory: app
+        run: npm run make -- --targets=@electron-forge/maker-zip
+      - name: Verify extracted Windows ZIP
+        if: runner.os == 'Windows'
+        working-directory: app
+        shell: pwsh
+        run: |
+          $zip = Get-Item "out/make/zip/win32/${{ matrix.arch }}/*.zip"
+          $destination = Join-Path $env:RUNNER_TEMP "clippi-evaluation"
+          Expand-Archive -LiteralPath $zip.FullName -DestinationPath $destination
+          $application = Join-Path $destination "Clippi-Health-win32-${{ matrix.arch }}"
+          $signature = Get-AuthenticodeSignature (Join-Path $application "Clippi-Health.exe")
+          if ($signature.Status -ne 'NotSigned') { throw "Unexpected evaluation signature: $($signature.Status)" }
+          node verify-package.mjs $application
+          if ($LASTEXITCODE -ne 0) { throw "Extracted Windows ZIP smoke failed" }
+      - name: Verify Windows x64 Setup installation
+        if: runner.os == 'Windows' && matrix.arch == 'x64'
+        working-directory: app
+        shell: pwsh
+        run: |
+          $setup = Get-Item "out/make/squirrel.windows/x64/* Setup.exe"
+          if ((Get-AuthenticodeSignature $setup.FullName).Status -ne 'NotSigned') { throw "Setup was not unsigned" }
+          $installed = Start-Process -FilePath $setup.FullName -ArgumentList '--silent' -PassThru -Wait
+          if ($installed.ExitCode -ne 0) { throw "Setup failed: $($installed.ExitCode)" }
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          node verify-package.mjs (Join-Path $env:LOCALAPPDATA "ClippiHealth/app-$version")
+          if ($LASTEXITCODE -ne 0) { throw "Installed Windows application smoke failed" }
+      - name: Verify Linux DEB installation
+        if: runner.os == 'Linux'
+        working-directory: app
+        shell: bash
+        run: |
+          packages=(out/make/deb/${{ matrix.arch }}/*.deb)
+          test "${#packages[@]}" -eq 1
+          test "$(dpkg-deb -f "${packages[0]}" Architecture)" = "${{ matrix.arch == 'x64' && 'amd64' || 'arm64' }}"
+          sudo apt-get install --yes --no-install-recommends "$PWD/${packages[0]}"
+          node verify-package.mjs /usr/lib/clippi-health
+      - name: Verify extracted Linux ZIP with configured sandbox
+        if: runner.os == 'Linux'
+        working-directory: app
+        shell: bash
+        run: |
+          destination="$RUNNER_TEMP/clippi-evaluation"
+          archives=(out/make/zip/linux/${{ matrix.arch }}/*.zip)
+          test "${#archives[@]}" -eq 1
+          unzip -q "${archives[0]}" -d "$destination"
+          application="$destination/Clippi-Health-linux-${{ matrix.arch }}"
+          test -x "$application/Clippi-Health"
+          test -x "$application/resources/clippi-runtime/clippi-runtime"
+          # Configure only this throwaway fixture, not a global sandbox bypass.
+          sudo chown root:root "$application/chrome-sandbox"
+          sudo chmod 4755 "$application/chrome-sandbox"
+          node verify-package.mjs "$application"
       - name: Upload evaluation artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

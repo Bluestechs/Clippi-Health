@@ -3,7 +3,8 @@ import { spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 
-const executable = resolve("runtime", "clippi-runtime", process.platform === "win32" ? "clippi-runtime.exe" : "clippi-runtime");
+const runtimeDirectory = process.argv[2] ?? resolve("runtime", "clippi-runtime");
+const executable = resolve(runtimeDirectory, process.platform === "win32" ? "clippi-runtime.exe" : "clippi-runtime");
 if (!existsSync(executable)) throw new Error(`Bundled runtime was not found at ${executable}`);
 
 const root = mkdtempSync(join(tmpdir(), "clippi-health-runtime-"));
