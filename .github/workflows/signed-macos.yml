@@ -103,6 +103,19 @@ jobs:
           xcrun stapler validate app/out/make/Clippi-Health.dmg
           hdiutil verify app/out/make/Clippi-Health.dmg
           codesign --verify --deep --strict --verbose=2 app/out/Clippi-Health-darwin-${{ matrix.arch }}/Clippi-Health.app
+      - name: Verify native app from notarized disk image
+        run: |
+          mount="$RUNNER_TEMP/clippi-notarized-${{ matrix.arch }}"
+          mkdir "$mount"
+          hdiutil attach app/out/make/Clippi-Health.dmg -readonly -nobrowse -mountpoint "$mount"
+          trap 'hdiutil detach "$mount"' EXIT
+          application="$mount/Clippi-Health.app"
+          expected="${{ matrix.arch }}"
+          if [[ "$expected" == "x64" ]]; then expected="x86_64"; fi
+          test "$(lipo -archs "$application/Contents/MacOS/Clippi-Health")" = "$expected"
+          test "$(lipo -archs "$application/Contents/Resources/clippi-runtime/clippi-runtime")" = "$expected"
+          node app/verify-runtime.mjs "$application/Contents/Resources/clippi-runtime"
+          TMPDIR="$RUNNER_TEMP" "$application/Contents/MacOS/Clippi-Health" --smoke
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: macos-${{ matrix.arch }}
