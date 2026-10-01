@@ -92,7 +92,9 @@ npm start
 
 Release builds bundle the Python record engine, portable PDF extraction, connector catalog, and dashboard assets. An installed app therefore does not require Python, Node, Git, or a terminal. It creates a private local record store on first launch; the user manages sources from the app.
 
-The repository can produce `.dmg`, Windows Squirrel, `.deb`, and ZIP evaluation artifacts through **Installer builds**. After Apple credentials are configured, **Signed macOS builds** can independently produce Developer ID signed and notarized Mac artifacts for tester review. The full **Signed release** workflow still waits for Apple notarization and Microsoft Artifact Signing before creating a draft GitHub release. See [`app/README.md`](app/README.md) and [`docs/RELEASING.md`](docs/RELEASING.md).
+Download the published [Beta 1.0 desktop prerelease](https://github.com/bennydogg/clippi-health/releases/tag/beta-1.0): signed/notarized Mac DMGs for Apple Silicon/Intel; unsigned Windows x64 Setup/ZIP and native ARM64 ZIP; Linux x64/ARM64 DEB/ZIP. All six targets include the current fixes from one tagged commit. Verify the exact download against `SHA256SUMS` and start with **Try demo**. Windows publisher/SmartScreen warnings are expected; Debian compatibility and complete fresh-machine/accessibility acceptance remain unverified. Beta 1.0 is release metadata; the internal app version is 0.1.0.
+
+The repository produces evaluation artifacts through **Installer builds** and signed/notarized Mac artifacts through **Signed macOS builds**. The separate **Signed release** production workflow remains fail-closed on Apple notarization and Microsoft Artifact Signing; it is not the unsigned Windows beta path. See [`app/README.md`](app/README.md) and [`docs/RELEASING.md`](docs/RELEASING.md).
 
 Before publishing a source archive or desktop package, follow [`DISTRIBUTION.md`](DISTRIBUTION.md) and run `python3 scripts/audit_distribution.py`. Never ZIP a working data folder: ignored source records and generated outputs can still be present on disk.
 
