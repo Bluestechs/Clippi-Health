@@ -59,6 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        if: runner.os != 'Linux'
         with:
           python-version: "3.12"
           architecture: ${{ matrix.arch }}
@@ -78,11 +79,14 @@ jobs:
           TARGET_ARCH: ${{ matrix.arch }}
         run: |
           node -e 'require("node:assert/strict").equal(process.arch, process.env.TARGET_ARCH)'
-          python -c 'import os, platform, struct; assert platform.machine().lower() in {"x64": ("amd64", "x86_64"), "arm64": ("arm64", "aarch64")}[os.environ["TARGET_ARCH"]]; assert struct.calcsize("P") == 8'
+          if [[ "$RUNNER_OS" != Linux ]]; then
+            python -c 'import os, platform, struct; assert platform.machine().lower() in {"x64": ("amd64", "x86_64"), "arm64": ("arm64", "aarch64")}[os.environ["TARGET_ARCH"]]; assert struct.calcsize("P") == 8'
+          fi
       - name: Install Linux packaging and smoke tools
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --yes fakeroot xvfb unzip
       - name: Install runtime builder
+        if: runner.os != 'Linux'
         run: python -m pip install -r packaging/requirements-build.txt
       - name: Install desktop dependencies
         working-directory: app

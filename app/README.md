@@ -8,7 +8,8 @@ The unlicensed browser exporter and its saved portal sessions have been removed.
 
 - Node.js 22 for development and packaging.
 - Python 3.9+ for source development.
-- PyInstaller and pypdf from `../packaging/requirements-build.txt` when producing a self-contained package.
+- macOS/Windows packaging: PyInstaller and pypdf from `../packaging/requirements-build.txt`.
+- Linux packaging: a running Docker engine (or Podman with `CONTAINER_ENGINE=podman`); Python and runtime build dependencies are installed in the baseline container.
 
 People installing a release do not need these tools. The packaged app includes the record engine and portable PDF extraction.
 
@@ -26,12 +27,15 @@ npm run smoke
 To make an installer on the current operating system:
 
 ```bash
-python3 -m pip install -r ../packaging/requirements-build.txt
+# macOS/Windows only; Linux installs these inside its container.
+if [ "$(uname -s)" != Linux ]; then
+  python3 -m pip install -r ../packaging/requirements-build.txt
+fi
 npm ci
 npm run make
 ```
 
-Artifacts are written under `out/make/`. PyInstaller runs natively on each target rather than cross-compiling. The GitHub **Installer builds** workflow covers macOS Apple Silicon/Intel plus Windows and Linux x64/ARM64; `platforms` selects Windows/Linux builds and `include_macos` controls optional Mac evaluation packages. Windows x64 produces unsigned Squirrel Setup and portable ZIP; ARM64 is a native ZIP only because Squirrel wrappers are Intel binaries. Linux produces DEB and ZIP on Ubuntu 24.04, with real installed/extracted-app smoke. Prefer DEB; a portable ZIP requires a correctly configured Chromium sandbox. Debian/older glibc and fresh-machine compatibility remain unverified. Headless Linux smoke uses Xvfb and evaluation-only software rendering, without changing shipped GPU or sandbox defaults. Local Mac builds are ad-hoc signed; these evaluation builds are not trusted-publisher releases.
+Artifacts are written under `out/make/`. PyInstaller runs natively on each target. Linux always freezes the engine in an Ubuntu 22.04/glibc 2.35 container with system Python 3.10, then runs build, Doctor, query, connector, and demo checks there; the host Python is not used. DEBs require `libc6 (>= 2.35)`. The GitHub **Installer builds** workflow covers macOS Apple Silicon/Intel and Windows/Linux x64/ARM64; `platforms` selects Windows/Linux targets and `include_macos` controls optional Mac evaluation packages. Windows x64 produces unsigned Squirrel Setup and ZIP; ARM64 is a native ZIP because Squirrel wrappers are Intel binaries. Linux runners remain Ubuntu 24.04, with installed/extracted-app smoke. A corrected ARM64 DEB also passed installed demo/UI smoke in Debian 12 with glibc 2.36; fresh-machine/GPU acceptance remains separate. Prefer DEB; portable ZIP requires a configured Chromium sandbox. Headless smoke uses Xvfb and evaluation-only software rendering, without disabling sandboxing. Published Beta 1.0 Linux assets predate this fix; see [`../docs/RELEASING.md`](../docs/RELEASING.md).
 
 The tag-driven production workflow requires Apple Developer ID signing plus notarization and Microsoft Artifact Signing. It creates a draft release only after every platform succeeds. See [`../docs/RELEASING.md`](../docs/RELEASING.md).
 

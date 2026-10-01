@@ -116,6 +116,7 @@ module.exports = {
           homepage: "https://github.com/bennydogg/clippi-health",
           icon: path.join(assets, "clippi-health.png"),
           categories: ["Utility", "MedicalSoftware"],
+          depends: ["libc6 (>= 2.35)"],
         },
       },
     },

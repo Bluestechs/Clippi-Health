@@ -21,6 +21,10 @@ function run(args) {
 
 try {
   run(["build"]);
+  const checks = JSON.parse(run(["query", "--json", "doctor"]));
+  for (const check of ["sqlite with FTS5", "PDF text extraction (pypdf)"]) {
+    if (!checks.some((item) => item.check === check && item.ok)) throw new Error(`Runtime doctor failed: ${check}`);
+  }
   for (const path of ["clippi-health.json", "data/health.db", "dashboard.html"]) {
     if (!existsSync(join(root, path))) throw new Error(`Runtime did not create ${path}`);
   }
@@ -39,7 +43,7 @@ try {
   const sample = JSON.parse(run(["query", "--json", "summary"]));
   if (sample.patient?.firstName !== "Sally" || sample.labs !== 108) throw new Error("Bundled demo is incomplete");
   run(["build"]);
-  console.log("Bundled runtime passed clean-store build, query, connector, and populated demo checks.");
+  console.log("Bundled runtime passed clean-store build, doctor, query, connector, and populated demo checks.");
 } finally {
   rmSync(root, { recursive: true, force: true });
 }
