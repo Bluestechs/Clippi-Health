@@ -48,10 +48,14 @@ class DemoDataTests(unittest.TestCase):
                 self.assertEqual(db.execute("SELECT count(*) FROM labs_clean").fetchone()[0], 108)
                 for table in ("documents", "encounters", "conditions", "procedures", "medications", "immunizations", "allergies", "events"):
                     self.assertGreater(db.execute(f"SELECT count(*) FROM {table}").fetchone()[0], 0)
-                glucose = db.execute("SELECT value,min,max,n FROM vitals_daily WHERE metric='CGM / meter glucose'").fetchall()
+                glucose = db.execute("SELECT date, value,min,max,n FROM vitals_daily WHERE metric='CGM / meter glucose'").fetchall()
                 self.assertEqual(len(glucose), 365)
-                self.assertTrue(all(low < value < high and n == 288 for value, low, high, n in glucose))
-                self.assertGreater(len({r[0] for r in glucose}), 300)
+                tidepool_days = {f"2026-09-{day:02d}" for day in range(15, 29)}
+                self.assertTrue(all(low < value < high and n == (290 if day in tidepool_days else 288)
+                                    for day, value, low, high, n in glucose))
+                self.assertGreater(len({r[1] for r in glucose}), 300)
+                self.assertEqual(db.execute("SELECT count(*) FROM device_samples").fetchone()[0], 14 * (288 + 24 + 3 + 3 + 2))
+                self.assertEqual(db.execute("SELECT count(*) FROM sources WHERE key='tidepool'").fetchone()[0], 1)
                 self.assertEqual(db.execute("SELECT count(*) FROM vitals_daily WHERE metric='Glucose time in range 70–180'").fetchone()[0], 365)
                 for metric in ("Insulin basal", "Insulin bolus"):
                     self.assertEqual(db.execute("SELECT count(*) FROM vitals_daily WHERE metric=?", [metric]).fetchone()[0], 365)
@@ -61,6 +65,11 @@ class DemoDataTests(unittest.TestCase):
             self.assertIn('"lastName":"Seastar"', page)
             self.assertNotIn(str(REPO), page)
             self.assertNotIn(str(root), page)
+            self.assertIn("single-day overlay", page)
+            self.assertIn("daily trends", page)
+            self.assertIn("Basal share", page)
+            self.assertIn('"samples":[["2026-09-15 00:00","basal"', page)
+            self.assertIn('["2026-09-15 00:00","cbg"', page)
             # Rebuild does not change edits; explicitly starting a fresh demo restores samples.
             notes = root / "case_study_notes.md"
             notes.write_text("Temporary fictional edit")

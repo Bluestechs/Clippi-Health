@@ -1,0 +1,22 @@
+{
+  "key": "fhir-tidepool",
+  "name": "Tidepool",
+  "org": "Tidepool",
+  "portal_url": "https://app.tidepool.org",
+  "portal_label": "Open Tidepool",
+  "manual_help_url": "https://support.tidepool.org/hc/en-us/articles/360044350552-Exporting-Tidepool-data",
+  "manual_help_label": "View Tidepool export help",
+  "manual_title": "Import Tidepool diabetes data",
+  "manual_import_mode": "files",
+  "import_label": "Choose TidepoolExport JSON…",
+  "manual_export_steps": [
+    "Sign in at app.tidepool.org and confirm your pump or CGM data is present.",
+    "Choose Export Data in the blue navigation bar (clinician accounts: select the person with diabetes first).",
+    "Select a date range up to 90 days, choose mg/dL or mmol/L, and choose JSON.",
+    "Choose Export and keep the downloaded TidepoolExport.json on this computer, then return here and choose that file."
+  ],
+  "registration_url": "https://tidepool.redocly.app",
+  "registration_label": "View Tidepool API docs",
+  "registration_note": "Tidepool has paused new Client IDs, and its personal API signs in with the account password for a session token, which Clippi-Health never collects. Direct connection stays disabled until Tidepool publishes a verified public-client OAuth profile.",
+  "direct_note": "Tidepool is not SMART-on-FHIR and publishes no verified local OAuth profile. Use the JSON export above; daily glucose, insulin, and carb rows are projected to charts with the raw export authoritative. Where Tidepool and Apple Health overlap on a day and metric, the Tidepool value is used."
+}

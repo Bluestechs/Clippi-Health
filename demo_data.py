@@ -155,6 +155,51 @@ def generate(root, today=None):
     xml.append("</HealthData>")
     with zipfile.ZipFile(root / "raw/apple/seastar-simulated-health.zip", "w", zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("apple_health_export/export.xml", "\n".join(xml))
+    # Two weeks of pump/CGM datum in Tidepool export shape, exercising the same
+    # pipeline as a real TidepoolExport.json: daily rows, intraday overlay, basics.
+    # Exactly 288 CGM readings per day keeps full-day coverage assertions exact;
+    # two fingersticks a day ride along as smbg.
+    tidepool = []
+    for ago in range(14, 0, -1):
+        day = (today - timedelta(days=ago)).isoformat()
+        baseline = 132 + 12 * math.sin(ago / 3) + rng.uniform(-10, 10)
+        for sample in range(288):
+            minutes = sample * 5
+            hour = minutes / 60
+            meals = sum(height * math.exp(-((hour - peak) / .9) ** 2)
+                      for peak, height in [(8.5, 52), (13.5, 60), (19.5, 66)])
+            glucose = max(58, min(290, baseline + meals + rng.uniform(-9, 9) + 8 * math.sin(hour * 1.6)))
+            hh, mm = divmod(minutes, 60)
+            tidepool.append({"type": "cbg", "id": f"demo-tidepool-cbg-{ago}-{sample}",
+                             "value": round(glucose), "units": "mg/dL",
+                             "deviceTime": f"{day}T{hh:02d}:{mm:02d}:00",
+                             "time": f"{day}T{hh:02d}:{mm:02d}:00.000Z", "deviceId": "demo-cgm"})
+        for hour in range(24):
+            tidepool.append({"type": "basal", "id": f"demo-tidepool-basal-{ago}-{hour}",
+                             "deliveryType": "scheduled", "rate": 0.8, "duration": 3600000,
+                             "deviceTime": f"{day}T{hour:02d}:00:00",
+                             "time": f"{day}T{hour:02d}:00:00.000Z", "deviceId": "demo-pump"})
+        for meal_hour, grams in ((8, 45), (13, 60), (19, 70)):
+            units = round(grams / 12 + rng.uniform(-0.5, 1.0), 1)
+            tidepool.append({"type": "bolus", "id": f"demo-tidepool-bolus-{ago}-{meal_hour}",
+                             "subType": "normal", "normal": units,
+                             "deviceTime": f"{day}T{meal_hour:02d}:10:00",
+                             "time": f"{day}T{meal_hour:02d}:10:00.000Z", "deviceId": "demo-pump"})
+            tidepool.append({"type": "wizard", "id": f"demo-tidepool-wizard-{ago}-{meal_hour}",
+                             "carbInput": grams, "bolus": units,
+                             "deviceTime": f"{day}T{meal_hour:02d}:05:00",
+                             "time": f"{day}T{meal_hour:02d}:05:00.000Z", "deviceId": "demo-pump"})
+        for finger_hour, finger_minute in ((7, 30), (22, 15)):
+            tidepool.append({"type": "smbg", "id": f"demo-tidepool-smbg-{ago}-{finger_hour}",
+                             "value": round(max(58, min(290, baseline + rng.uniform(-12, 12)))),
+                             "units": "mg/dL", "subType": "manual",
+                             "deviceTime": f"{day}T{finger_hour:02d}:{finger_minute:02d}:00",
+                             "time": f"{day}T{finger_hour:02d}:{finger_minute:02d}:00.000Z",
+                             "deviceId": "demo-meter"})
+    for maker in ("DemoCGM", "DemoPump"):
+        tidepool.append({"type": "upload", "id": f"demo-tidepool-upload-{maker}",
+                         "deviceManufacturers": [maker], "time": f"{today.isoformat()}T12:00:00.000Z"})
+    (root / "raw/other/TidepoolExport.json").write_text(json.dumps(tidepool), encoding="utf-8")
     (root / "topics.json").write_text(json.dumps({"Diabetes": {
         "keywords": ["diabetes", "CGM", "insulin", "retinal"],
         "tests": ["A1c", "glucose", "creatinine", "albumin"],

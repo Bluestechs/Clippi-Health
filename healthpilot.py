@@ -7,6 +7,7 @@ Inputs (all under raw/, never modified):
   raw/fhir/<source>/        direct SMART/FHIR or user-supplied NDJSON plus source metadata
   raw/**/IHE_XDM/**/*.XML   standards-based C-CDA record downloads
   raw/apple/*.zip           Apple Health "Export All Health Data" (clinical labs + device data)
+  raw/other/TidepoolExport*.json  Tidepool Export Data (JSON) → vitals_daily daily rows
   raw/imports/*.zip         user-selected local email/document exports (MBOX, EML, documents)
   raw/other/, raw/quest-pdfs/   any extra PDF/HTML/TXT files to index for search
   curated_events.csv        hand-maintained timeline events (optional)
@@ -303,8 +304,9 @@ def convert_unit(value, raw_unit, canon_unit):
 from email_records import SCHEMA as EMAIL_SCHEMA, ingest_exports
 from fhir_records import SCHEMA as FHIR_SCHEMA, ingest_exports as ingest_fhir_exports
 from archive_records import ingest_archives
+from tidepool_records import ingest_tidepool
 
-SCHEMA_VERSION = "4"
+SCHEMA_VERSION = "5"
 SCHEMA = """
 CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT);
 CREATE TABLE sources(
@@ -331,6 +333,8 @@ CREATE TABLE immunizations(id INTEGER PRIMARY KEY, source TEXT, org TEXT, name T
 CREATE TABLE allergies(id INTEGER PRIMARY KEY, source TEXT, org TEXT, name TEXT, reactions TEXT, severe TEXT, noted TEXT);
 CREATE TABLE vitals_daily(date TEXT, metric TEXT, value REAL, min REAL, max REAL, n INTEGER, unit TEXT,
   PRIMARY KEY(date, metric));
+CREATE TABLE device_samples(date TEXT, time TEXT, kind TEXT, value REAL, unit TEXT, detail REAL);
+CREATE INDEX device_samples_date ON device_samples(date);
 CREATE TABLE events(
   id INTEGER PRIMARY KEY, date TEXT, lane TEXT, title TEXT, detail TEXT, org TEXT,
   source TEXT, doc_ids TEXT, curated INTEGER DEFAULT 0, provenance TEXT);
@@ -999,6 +1003,8 @@ def build_dashboard(db):
                           rows(db, "SELECT name, date, source, org FROM immunizations ORDER BY date DESC")],
         "allergies": rows(db, "SELECT name, reactions, severe, noted FROM allergies"),
         "vitals": rows(db, "SELECT date, metric, value, min, max, n, unit FROM vitals_daily ORDER BY metric, date"),
+        "samples": [[r["time"], r["kind"], r["value"], r["detail"]] for r in
+                    rows(db, "SELECT time, kind, value, detail FROM device_samples ORDER BY time")],
         "lanes": LANES,
         "topics": dashboard_topics(db),
     }
@@ -1032,6 +1038,7 @@ def export_tables(db):
         "allergies": "SELECT * FROM allergies",
         "events": "SELECT * FROM events ORDER BY date",
         "vitals_daily": "SELECT * FROM vitals_daily ORDER BY metric, date",
+        "device_samples": "SELECT * FROM device_samples ORDER BY time",
         "sources": "SELECT * FROM sources",
     }
     for name, sql in queries.items():
@@ -1087,6 +1094,9 @@ def main():
     n_loose = ingest_loose_files(db)
     if n_loose:
         print(f"Loose documents: {n_loose}")
+    tidepool_counts = ingest_tidepool(db, ROOT, sys.modules[__name__])
+    if tidepool_counts:
+        print(f"Tidepool export: {tidepool_counts}")
     for source, counts in ingest_archives(db, ROOT, sys.modules[__name__]).items():
         print(f"Local archive {source}: {counts}")
     n_journal = ingest_journal(db)

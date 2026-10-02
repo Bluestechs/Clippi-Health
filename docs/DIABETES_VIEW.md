@@ -1,13 +1,21 @@
 # Glucose and insulin together
 
-**Dashboard → Vitals** starts with a paired diabetes view. Glucose appears on the left and insulin on the right. Both charts share the selected date window: dragging to zoom either chart updates the other, and double-clicking resets both. Narrow windows stack the panels vertically.
+**Dashboard → Vitals** starts with paired diabetes views. Glucose appears on the left and insulin on the right. Both charts share the selected date window: dragging to zoom either chart updates the other, and double-clicking resets both. Narrow windows stack the panels vertically.
 
 - **Blue:** CGM/meter glucose, with the daily mean and daily minimum/maximum band.
 - **Pink:** basal insulin delivered per day.
 - **Orange:** bolus insulin delivered per day.
 - **Gray, dotted:** insulin with missing, conflicting or unrecognized delivery-type metadata.
 
-The charts retain separate units: glucose in mg/dL and insulin in units delivered. Dense series also show a 30-day average. These are daily summaries, not a pump dosing screen or an intraday dose/glucose overlay. The feature displays imported delivery records; it does not add manual insulin logging or infer doses.
+The charts retain separate units: glucose in mg/dL and insulin in units delivered. Dense series also show a 30-day average. A period-summary strip above the pair shows reading-weighted average glucose, overall time in range, average insulin per day, and the basal share of classified insulin — summaries of the same daily rows, recomputed for the selected window. These views display imported records; they do not add manual insulin logging, infer doses, or estimate A1c.
+
+## Single-day overlay
+
+On days covered by a Tidepool export, a second card draws one day at intraday resolution from `device_samples`: the CGM trace with a 70–180 mg/dL target band, fingersticks, basal-rate steps (including suspensions at zero), bolus triangles sized by dose, and carb flags. Day navigation (previous/next plus a date picker) is independent of the paired charts' date window. Days without Tidepool samples have no overlay; the daily charts above remain the record for Apple HealthKit days.
+
+## Daily trends
+
+A third card folds the same intraday readings into half-hour time-of-day bands across the selected days: median glucose with 25–75 and 10–90 percentile bands, behind the same 70–180 target band. It follows the Vitals date window, so narrowing the range recomputes the bands. Like the overlay, it needs Tidepool samples; without them the card does not render.
 
 ## Where the distinction comes from
 

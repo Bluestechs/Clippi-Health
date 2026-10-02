@@ -66,6 +66,8 @@ section[hidden] { display: none; }
 .tile .arrow { color: var(--ink-2); font-size: 16px; line-height: 1; }
 .tile .value { font-size: 24px; font-weight: 600; margin-top: 2px; }
 .tile .note { color: var(--muted); font-size: 12px; }
+.tile.static { cursor: default; }
+.tile.static:hover { background: var(--surface); }
 #visits-card { scroll-margin-top: 110px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th { text-align: left; font-weight: 600; color: var(--ink-2); border-bottom: 1px solid var(--border-solid); padding: 6px 8px 6px 0; }
@@ -852,7 +854,7 @@ function rolling(xs, ys, days) {
 }
 function renderVitals() {
   const box = $("#vitals");
-  if (!DATA.vitals.length) { box.replaceChildren(h("div", { class: "card empty", text: "No Apple Health device data found. Drop an Apple Health export zip into raw/apple/ and rebuild." })); return; }
+  if (!DATA.vitals.length) { box.replaceChildren(h("div", { class: "card empty", text: "No device data found. Drop an Apple Health export zip into raw/apple/ or a TidepoolExport.json into raw/other/ and rebuild." })); return; }
   const by = new Map();
   for (const r of DATA.vitals) { if (!by.has(r.metric)) by.set(r.metric, []); by.get(r.metric).push(r); }
   const startOf = segControl($("#vit-range"), "vitrange", draw);
@@ -863,6 +865,10 @@ function renderVitals() {
     if (by.has("CGM / meter glucose") || by.has("Insulin")) {
       cards.push(diabetesCard(by, xr, start));
     }
+    const daily = diabetesDaily();
+    if (daily) cards.push(daily);
+    const trends = diabetesTrends(start);
+    if (trends) cards.push(trends);
     for (const key of VITAL_ORDER) {
       if (key === "BP") {
         const s = (by.get("BP systolic") || []).filter(r => !start || r.date >= start), d = (by.get("BP diastolic") || []).filter(r => !start || r.date >= start);
@@ -892,6 +898,8 @@ function diabetesCard(by, xr, start) {
   const controls = chartControls("vital:diabetes", "Glucose and insulin", xr);
   group.append(controls.form);
   const visible = metric => (by.get(metric) || []).filter(r => !start || r.date >= start);
+  const basics = diabetesBasics(visible);
+  if (basics) group.append(basics);
   const insulinSeries = [
     ["Basal", visible("Insulin basal"), "--insulin-basal"],
     ["Bolus", visible("Insulin bolus"), "--c-orange"],
@@ -915,6 +923,182 @@ function diabetesCard(by, xr, start) {
   if (legacy.length) group.append(h("p", { class: "sub", text: "Some insulin totals have no delivery-type breakdown in this build. Rebuild from the original export to read any available basal/bolus labels." }));
   group.append(pair);
   return group;
+}
+function diabetesBasics(visible) {
+  const stats = [];
+  const glucose = visible("CGM / meter glucose").filter(r => r.value != null);
+  if (glucose.length) {
+    let sum = 0, n = 0;
+    for (const r of glucose) { sum += r.value * (r.n || 1); n += r.n || 1; }
+    stats.push(["Average glucose", `${fmtNum(sum / n)} mg/dL`, `${glucose.length} days · reading-weighted`, "blue"]);
+  }
+  const tir = visible("Glucose time in range 70–180").filter(r => r.value != null && r.n);
+  if (tir.length) {
+    let sum = 0, n = 0;
+    for (const r of tir) { sum += r.value * r.n; n += r.n; }
+    stats.push(["Time in range", `${fmtNum(sum / n)}%`, `70–180 mg/dL · ${tir.length} days with 12+ readings`, "green"]);
+  }
+  const insulin = visible("Insulin").filter(r => r.value != null);
+  if (insulin.length) {
+    const total = insulin.reduce((s, r) => s + r.value, 0);
+    stats.push(["Average insulin", `${fmtNum(total / insulin.length)} U/day`, `${insulin.length} days with totals`, "orange"]);
+  }
+  const basal = visible("Insulin basal").filter(r => r.value != null), bolus = visible("Insulin bolus").filter(r => r.value != null);
+  const basalSum = basal.reduce((s, r) => s + r.value, 0), bolusSum = bolus.reduce((s, r) => s + r.value, 0);
+  if (basalSum > 0 && bolusSum > 0) {
+    stats.push(["Basal share", `${fmtNum(100 * basalSum / (basalSum + bolusSum))}% basal`,
+      `${fmtNum(bolusSum)} U bolus of ${fmtNum(basalSum + bolusSum)} U classified`, "magenta"]);
+  }
+  if (!stats.length) return null;
+  return h("div", { class: "tiles", role: "group", "aria-label": "Diabetes period summaries" },
+    ...stats.map(([label, value, note, hue]) => h("div", { class: "tile static", style: `--tc: var(--c-${hue})` },
+      h("div", { class: "label", text: label }), h("div", { class: "value", text: value }), h("div", { class: "note", text: note }))));
+}
+function diabetesDaily() {
+  const samples = DATA.samples || [];
+  if (!samples.length) return null;
+  const days = [...new Set(samples.map(s => s[0].slice(0, 10)))].sort();
+  const first = days[0], last = days[days.length - 1];
+  let day = last;
+  const card = h("div", { class: "card", "data-daily-overlay": "true" },
+    h("h2", { text: "Diabetes · single-day overlay" }),
+    h("p", { class: "sub", text: "CGM trace with the 70–180 target band, basal rate steps, bolus triangles sized by dose, fingersticks and carb flags — one day at intraday resolution, from the Tidepool export." }));
+  const prev = h("button", { type: "button", text: "◀ Previous day" });
+  const nxt = h("button", { type: "button", text: "Next day ▶" });
+  const pick = h("input", { type: "date", value: day, min: first, max: last, "aria-label": "Overlay day" });
+  const status = h("p", { class: "range-status", role: "status", "aria-live": "polite" });
+  const nav = h("form", { class: "chart-controls", "aria-label": "Single-day overlay: day picker",
+    onsubmit: event => { event.preventDefault(); if (pick.value) void show(pick.value); } },
+    h("label", null, "Day", pick),
+    h("button", { type: "submit", text: "Show" }), prev, nxt, status);
+  const legend = h("div", { class: "legend" },
+    [["CGM", "--series-1"], ["Fingerstick", "--c-blue"], ["Basal rate", "--insulin-basal"],
+     ["Bolus", "--c-orange"], ["Carbs", "--c-green"]]
+      .map(([name, color]) => h("span", null, h("i", { style: `border-color:${cssVar(color)}` }), name)));
+  const chart = h("div", { class: "chart", role: "img",
+    "aria-label": "Single-day glucose and insulin overlay. Event counts follow in text." });
+  chart.tabIndex = 0;
+  card.append(nav, legend, chart);
+  prev.onclick = () => void show(days[Math.max(0, days.indexOf(day) - 1)]);
+  nxt.onclick = () => void show(days[Math.min(days.length - 1, days.indexOf(day) + 1)]);
+  async function show(next) {
+    if (!days.includes(next)) {
+      status.textContent = `No intraday Tidepool data for ${next || "that date"}. Available: ${fmtDate(first)} – ${fmtDate(last)}.`;
+      return;
+    }
+    day = next; pick.value = day;
+    prev.disabled = day <= first; nxt.disabled = day >= last;
+    const at = t => `${day}T${t.slice(11)}`;
+    const cgm = samples.filter(s => s[0].slice(0, 10) === day && s[1] === "cbg");
+    const smbg = samples.filter(s => s[0].slice(0, 10) === day && s[1] === "smbg");
+    const bolus = samples.filter(s => s[0].slice(0, 10) === day && s[1] === "bolus");
+    const carbs = samples.filter(s => s[0].slice(0, 10) === day && s[1] === "carbs");
+    const segs = samples.filter(s => s[0].slice(0, 10) === day && s[1] === "basal")
+      .map(s => [Date.parse(at(s[0])), s[2], s[3] || 0]).sort((a, b) => a[0] - b[0]);
+    const readings = [...cgm, ...smbg].map(s => s[2]);
+    const cmax = readings.length ? Math.max(...readings) : 180, cmin = readings.length ? Math.min(...readings) : 100;
+    const lo = Math.min(60, cmin - 15), hi = Math.max(210, cmax + 25);
+    const traces = [];
+    if (cgm.length) traces.push({ type: "scatter", mode: "lines+markers", x: cgm.map(s => at(s[0])), y: cgm.map(s => s[2]),
+      name: "CGM", line: { width: 2, color: cssVar("--series-1") }, marker: { size: 4, color: cssVar("--series-1") },
+      hovertemplate: "<b>%{y} mg/dL</b> CGM<br>%{x|%H:%M}<extra></extra>" });
+    if (smbg.length) traces.push({ type: "scatter", mode: "markers", x: smbg.map(s => at(s[0])), y: smbg.map(s => s[2]),
+      name: "Fingerstick", marker: { size: 10, symbol: "diamond", color: cssVar("--c-blue"),
+        line: { width: 2, color: cssVar("--surface") } },
+      hovertemplate: "<b>%{y} mg/dL</b> fingerstick<br>%{x|%H:%M}<extra></extra>" });
+    if (segs.length) {
+      const bx = [], by = [];
+      let prevEnd = null;
+      for (const [start, rate, dur] of segs) {
+        if (prevEnd != null && start - prevEnd > 15 * 6e4) { bx.push(null); by.push(null); }
+        bx.push(new Date(start).toISOString(), new Date(start + dur).toISOString());
+        by.push(rate, rate);
+        prevEnd = start + dur;
+      }
+      traces.push({ type: "scatter", mode: "lines", x: bx, y: by, yaxis: "y2", name: "Basal rate",
+        line: { width: 2, color: cssVar("--insulin-basal"), shape: "hv" },
+        hovertemplate: "<b>%{y} U/hr</b> basal<br>%{x|%H:%M}<extra></extra>" });
+    }
+    if (bolus.length) traces.push({ type: "scatter", mode: "markers",
+      x: bolus.map(s => at(s[0])), y: bolus.map(() => hi - 12), name: "Bolus",
+      marker: { size: bolus.map(s => 8 + Math.min(s[2], 8)), symbol: "triangle-down", color: cssVar("--c-orange") },
+      text: bolus.map(s => `${fmtNum(s[2])} U · ${s[0].slice(11)}`),
+      hovertemplate: "<b>%{text}</b> bolus<extra></extra>" });
+    if (carbs.length) traces.push({ type: "scatter", mode: "markers",
+      x: carbs.map(s => at(s[0])), y: carbs.map(() => lo + 8), name: "Carbs",
+      marker: { size: 9, symbol: "diamond", color: cssVar("--c-green") },
+      text: carbs.map(s => `${fmtNum(s[2])} g · ${s[0].slice(11)}`),
+      hovertemplate: "<b>%{text}</b> carbs<extra></extra>" });
+    const end = new Date(Date.parse(day) + 864e5).toISOString().slice(0, 10);
+    status.textContent = `${fmtDate(day)} · ${cgm.length} CGM readings · ${smbg.length} fingersticks · ` +
+      `${bolus.length} boluses · ${carbs.length} carb entries`;
+    await Plotly.newPlot(chart, traces.length ? traces : [{ type: "scatter", mode: "markers", x: [], y: [] }],
+      baseLayout({ height: 300, xaxis: { range: [`${day}T00:00`, `${end}T00:00`], tickformat: "%H:%M" },
+        yaxis: { title: { text: "mg/dL" }, range: [lo, hi] },
+        yaxis2: { title: { text: "U/hr" }, overlaying: "y", side: "right", showgrid: false },
+        shapes: [{ type: "rect", xref: "x", yref: "y", x0: `${day}T00:00`, x1: `${end}T00:00`,
+          y0: 70, y1: 180, fillcolor: cssVar("--series-1-wash"), line: { width: 0 }, layer: "below" }] }), plotConfig);
+  }
+  void show(day);
+  return card;
+}
+function pct(sorted, p) {
+  if (!sorted.length) return null;
+  const i = (sorted.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
+}
+function diabetesTrends(start) {
+  if (!(DATA.samples || []).length) return null;
+  const samples = DATA.samples.filter(s => (s[1] === "cbg" || s[1] === "smbg") && (!start || s[0].slice(0, 10) >= start));
+  const card = h("div", { class: "card", "data-trends": "true" },
+    h("h2", { text: "Diabetes · daily trends" }),
+    h("p", { class: "sub", text: "Time-of-day bands across the selected days: median glucose with 25–75 and 10–90 percentile bands from CGM and fingerstick readings." }));
+  const legend = h("div", { class: "legend" },
+    [["Median", "--series-1"], ["25–75%", "--wash"], ["10–90%", "--series-1-wash"]]
+      .map(([name, color]) => h("span", null, h("i", { style: `border-color:${cssVar(color)}` }), name)));
+  const chart = h("div", { class: "chart", role: "img",
+    "aria-label": "Time-of-day glucose percentile bands. Day counts follow in text." });
+  chart.tabIndex = 0;
+  const status = h("p", { class: "range-status", role: "status", "aria-live": "polite" });
+  card.append(legend, chart, status);
+  const BINS = 48;
+  const bins = Array.from({ length: BINS }, () => []);
+  for (const s of samples) {
+    const m = /^(\d{4}-\d{2}-\d{2}) (\d{2}):(\d{2})/.exec(s[0]);
+    if (m) bins[Math.min(BINS - 1, +m[2] * 2 + (+m[3] >= 30 ? 1 : 0))].push(s[2]);
+  }
+  const days = new Set(samples.map(s => s[0].slice(0, 10))).size;
+  const filled = bins.filter(b => b.length);
+  status.textContent = samples.length
+    ? `${days} days · ${samples.length} readings · thinnest half-hour has ${Math.min(...filled.map(b => b.length))} readings`
+    : "No intraday Tidepool readings in this date range.";
+  if (!samples.length) return card;
+  const x = bins.map((_, i) => `2000-01-01T${String(Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`);
+  const med = [], q1 = [], q3 = [], p10 = [], p90 = [];
+  for (const b of bins) {
+    b.sort((a, b) => a - b);
+    med.push(pct(b, 0.5)); q1.push(pct(b, 0.25)); q3.push(pct(b, 0.75)); p10.push(pct(b, 0.1)); p90.push(pct(b, 0.9));
+  }
+  const ends = [...med, ...q1, ...q3, ...p10, ...p90].filter(v => v != null);
+  const lo = Math.min(60, Math.min(...ends) - 15), hi = Math.max(210, Math.max(...ends) + 25);
+  const band = (upper, lower, color, fill) => [
+    { type: "scatter", mode: "lines", x, y: upper, line: { width: 0 }, hoverinfo: "skip" },
+    { type: "scatter", mode: "lines", x, y: lower, line: { width: 0 }, fill: "tonexty", fillcolor: cssVar(color),
+      hoverinfo: "skip", name: fill },
+  ];
+  const traces = [
+    ...band(p90, p10, "--series-1-wash", "10–90%"),
+    ...band(q3, q1, "--wash", "25–75%"),
+    { type: "scatter", mode: "lines", x, y: med, name: "Median",
+      line: { width: 2, color: cssVar("--series-1") },
+      hovertemplate: "<b>%{y} mg/dL</b> median<br>%{x|%H:%M}<extra></extra>" },
+  ];
+  requestAnimationFrame(() => Plotly.newPlot(chart, traces,
+    baseLayout({ height: 260, xaxis: { range: ["2000-01-01T00:00", "2000-01-02T00:00"], tickformat: "%H:%M" },
+      yaxis: { title: { text: "mg/dL" }, range: [lo, hi] },
+      shapes: [{ type: "rect", xref: "x", yref: "y", x0: "2000-01-01T00:00", x1: "2000-01-02T00:00",
+        y0: 70, y1: 180, fillcolor: cssVar("--series-1-wash"), line: { width: 0 }, layer: "below" }] }), plotConfig));
+  return card;
 }
 function vitalCard(title, unit, series, xr, minMax, sharedControls) {
   const dates = [...new Set(series.flatMap(([, records]) => records.map(r => r.date)))].sort();

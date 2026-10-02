@@ -361,11 +361,16 @@ TABLE_DOCS = OrderedDict([
         ("name / sig", "drug and directions"), ("date", "date supplied by the source, often empty"), ("provider", "prescriber or source reference when supplied")])),
     ("immunizations", ("Immunizations from FHIR, C-CDA, and Apple Health inputs.", [("name / date", "vaccine and date")])),
     ("allergies", ("Allergy list (empty means the chart lists none).", [])),
-    ("vitals_daily", ("Apple Health device data rolled up to one row per day and metric.", [
+    ("vitals_daily", ("Device data (Apple Health and Tidepool exports) rolled up to one row per day and metric.", [
         ("date / metric", "day and metric name (see § Vocabularies → Device metrics)"),
         ("value", "daily mean (glucose, weight, heart rate, HRV, SpO2 …) or daily total (steps, insulin, carbs, sleep hours)"),
         ("min / max / n", "daily minimum, maximum and sample count for averaged metrics"),
         ("unit", "unit of `value`")])),
+    ("device_samples", ("Intraday Tidepool samples behind the daily rows, for the single-day overlay. cbg/smbg in mg/dL; bolus in delivered units; basal as rate segments; carbs in grams.", [
+        ("date / time", "day and local `YYYY-MM-DD HH:MM` wall time of the sample"),
+        ("kind", "`cbg`, `smbg`, `bolus`, `basal` or `carbs`"),
+        ("value / unit", "glucose, delivered bolus units, basal rate in U/hr, or grams"),
+        ("detail", "basal segment duration in milliseconds; otherwise null")])),
     ("events", ("The timeline: dated things worth seeing at a glance, derived from the tables above plus `curated_events.csv`.", [
         ("date / lane / title / detail", "lane ∈ Diagnoses · Surgery & procedures · Hospital & ED · Imaging · Pathology & reports · Milestones"),
         ("doc_ids", "JSON array of documents.id supporting the event"),
@@ -452,6 +457,7 @@ Conventions: dates are ISO `YYYY-MM-DD` (local time); numbers are plain floats; 
 ```
 raw/fhir/<source>/*.jsonl    direct SMART/FHIR or supplied NDJSON → fhir_resources and projected clinical tables
 raw/apple/*.zip              Apple Health export — clinical-records/*.json (FHIR) → labs, immunizations; export.xml → vitals_daily
+raw/other/TidepoolExport*.json  Tidepool Export Data (JSON) → vitals_daily (direct pump/CGM export; wins overlapping day+metric)
 email/*/healthpilot-source.json  configured local email exports; index.csv + messages + attachments + OCR + labs.csv
 raw/other/**                 anything added by hand (PDF/HTML/TXT → documents; IHE_XDM/*.XML C-CDA → documents and explicit encounters)
 curated_events.csv           hand-written timeline rows → events (curated=1)
@@ -508,10 +514,22 @@ curated_events.csv           hand-written timeline rows → events (curated=1)
                  ["dept", "n", "first", "last"], ["Department", "Visits", "First", "Last"]))
     add("\n### Device metrics (`vitals_daily.metric`)\n")
     vt = {m: (hk, unit, how) for hk, (m, unit, how) in (vital_types or {}).items()}
+    tidepool_here = one(db, "SELECT 1 FROM sources WHERE key='tidepool'") is not None
+    tidepool_source = {
+        "CGM / meter glucose": "Tidepool cbg + smbg",
+        "Glucose time in range 70–180": "derived from Tidepool cbg + smbg",
+        "Insulin": "Tidepool bolus delivered + basal rate × duration",
+        "Insulin basal": "Tidepool basal rate × duration",
+        "Insulin bolus": "Tidepool bolus delivered (normal + extended)",
+        "Carbs logged": "Tidepool wizard carbInput",
+    }
     vrows = []
     for r in q(db, "SELECT metric, unit, count(*) days, min(date) first, max(date) last FROM vitals_daily GROUP BY metric ORDER BY metric"):
         hk, _, how = vt.get(r["metric"], ("derived", "", ""))
         rollup = {"mean": "daily mean, min, max, n", "sum": "daily total (max across apps writing the same metric, to avoid double counting)"}.get(how, "")
+        if r["metric"] in tidepool_source and tidepool_here:
+            rollup = {"mean": "daily mean, min, max, n", "sum": "daily total"}.get(how, rollup)
+            hk = tidepool_source[r["metric"]] + (f"; {hk} on days without Tidepool coverage" if hk != "derived" else "")
         if r["metric"].startswith("Glucose time in range"):
             rollup, hk = "% of that day's readings between 70 and 180 mg/dL, on days with ≥12 readings", "derived from HKQuantityTypeIdentifierBloodGlucose"
         if r["metric"] == "Sleep":
@@ -559,6 +577,7 @@ curated_events.csv           hand-written timeline rows → events (curated=1)
 - **Text extraction.** Source HTML/XML is flattened to text. Scanned PDFs and image attachments can have empty `text`; open `path`. FHIR Binary files are materialized under `data/fhir_files/` during a build.
 - **Apple Health clinical records** are FHIR DSTU2 as delivered by the labs; standalone Observations carry no performer and are attributed to Quest (see source notes). `issued` vs `effectiveDateTime` can differ by days; `date` uses `effectiveDateTime`.
 - **Device data** is summarized per day. Glucose comes from every app that wrote to HealthKit (Dexcom, Loop, meters), so CGM days have hundreds of samples and meter-only days a few; `n` tells them apart. Time in range is only computed on days with ≥12 readings.
+- **Tidepool device data** is also summarized per day: delivered insulin only (bolus normal + extended; basal rate × duration), pump-wizard carbs, glucose in mg/dL. Where Tidepool and Apple HealthKit cover the same day and metric, the Tidepool value is used and the raw exports stay authoritative.
 - **Time zones.** UTC instants are converted to local time; Apple and FHIR timestamps can carry their own offsets.
 - **Document and encounter tagging.** `note` requires an explicit FHIR document type, encounter-linked C-CDA episode-note code, or a source filename explicitly naming a clinical note. An email message about an appointment or a note mentioned inside a document does not create a note or encounter. `encounters` projects only structured C-CDA encompassing encounters with dates and finished/completed FHIR Encounters. Source exports may omit many real visits or notes; dashboard counts mean indexed records, not lifetime totals. See `docs/DATA_MAPPING.md` and the record-classification ADR.
 - **Ids are not stable** across rebuilds. `source_id`, `path`, and `date + title` are.
